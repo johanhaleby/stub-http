@@ -25,7 +25,7 @@
       str
       (.substring str 0 index-of-before))))
 
-(defn- query-params->map [param-string]
+(defn- params->map [param-string]
   (if-not (blank? param-string)
     (let [params-splitted-by-and (split param-string #"&")
           ; Handle no-value parameters. If a no-value parameter is found then use nil as parameter value
@@ -43,7 +43,7 @@
   "Takes a request path and transforms it into a map of its query parameters. Returns an empty map if no query parameters are defined"
   (if (.contains request-path "?")
     (let [param-string (substring-after request-path "?")]
-      (query-params->map param-string))
+      (params->map param-string))
     {}))
 
 (defn- fake-response [{:keys [status headers body content-type]}]
@@ -63,22 +63,22 @@
       (.setHeader fake-response (first header) (second header)))
     fake-response))
 
-(defn- fake-route-matching? [request-params]
-  (fn [potential-response]
-    (let [route-matchers (:route-matcher potential-response)]
-      (some #(if (= (get request-params (key %)) (val %)) potential-response) route-matchers))))
+(defn- fake-route-matching? [query-params route]
+  (let [route-matcher (:route-matcher route)
+        query-params-that-must-match (or (:query route-matcher) {})]
+    (if (zero? (count query-params-that-must-match))
+      route
+      (some #(if (= (get query-params (key %)) (val %)) route) query-params-that-must-match))))
 
-(defn- find-best-matching-fake-route [potential-responses request-path]
+(defn- best-matching-route [potential-responses request-path]
   "Matches the best "
   (condp = (count potential-responses)
     0 nil
-    1 (first potential-responses)
-    ; Several routes matches the path
     (let [query-map (request-path->map request-path)
-          matching-response (some (fake-route-matching? query-map) potential-responses)]
+          matching-response (some (partial fake-route-matching? query-map) potential-responses)]
       matching-response)))
 
-(defn- record-request-to-fake-route [request fake-route]
+(defn- record-received-request [request fake-route]
   (fn [fake-routes] (let [matching-route-matcher (:route-matcher fake-route)
                           route-matchers (map #(:route-matcher %) fake-routes)
                           matching-route-index (index-of route-matchers matching-route-matcher)
@@ -87,10 +87,9 @@
                                            :request-line (.getRequestLine request)
                                            :path         (.getPath request)
                                            :body         body
-                                           :params       (request-path->map (.getPath request))
-                                           :form-params  (query-params->map body)}]
+                                           :query-params (request-path->map (.getPath request))
+                                           :form-params  (params->map body)}]
                       (update-in fake-routes [matching-route-index :recorded-requests] conj recored-request))))
-
 
 (defn- create-dispatcher [fake-routes]
   "Create a MockWebServer dispatcher that will return the same response over and over on match"
@@ -98,13 +97,13 @@
     (dispatch [^RecordedRequest request]
       (let [request-path (.getPath request)
             request-path-no-params (substring-before request-path "?")
-            matches-request-path-fn #(or (= (:route-matcher %) request-path-no-params) (= (->> % :route-matcher :path) request-path-no-params))
-            matching-fake-routes (filter matches-request-path-fn @fake-routes)
-            best-match (find-best-matching-fake-route matching-fake-routes request-path)]
-        (if-not (nil? best-match)
+            matches-request-path-fn #(= (->> % :route-matcher :path) request-path-no-params)
+            routes-matching-path (filter matches-request-path-fn @fake-routes)
+            best-matching-route (best-matching-route routes-matching-path request-path)]
+        (if-not (nil? best-matching-route)
           ; Record the received request to the matched mock route
-          (swap! fake-routes (record-request-to-fake-route request best-match)))
-        (or (:response best-match) (fake-response {:status 500}))))))
+          (swap! fake-routes (record-received-request request best-matching-route)))
+        (or (:response best-matching-route) (fake-response {:status 500}))))))
 
 (defprotocol FakeServer
   (uri [this])
@@ -114,7 +113,9 @@
 
 (defn- record-route! [fake-routes route-matcher response]
   (let [fake-response (fake-response response)]
-    (swap! fake-routes conj {:route-matcher     route-matcher
+    (swap! fake-routes conj {:route-matcher     (if (map? route-matcher)
+                                                  route-matcher
+                                                  {:path route-matcher})
                              :response          fake-response
                              :recorded-requests []})))
 
@@ -129,7 +130,7 @@
 
   (let [fake-server (fake-server/start!)
         (fake-route! fake-server \"/x\" {:status 200 :content-type \"application/json\" :body (slurp (io/resource \"my.json\"))})
-        (fake-route! fake-server {:path \"/y\" :q \"something\")} {:status 200 :content-type \"application/json\" :body (slurp (io/resource \"my2.json\"))})]
+        (fake-route! fake-server {:path \"/y\" :query {:q \"something\")}} {:status 200 :content-type \"application/json\" :body (slurp (io/resource \"my2.json\"))})]
         ; Do actual HTTP request
          (shutdown! fake-server))"
   (let [fake-routes (atom [])

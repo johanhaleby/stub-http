@@ -15,7 +15,7 @@ More docs and implementation is coming soon.
 ```clojure
 (let [fake-server (fake-server/start!)
         (fake-route! fake-server "/x" {:status 200 :content-type "application/json" :body (slurp (io/resource "my.json"))})
-        (fake-route! fake-server {:path "/y" :q "something")} {:status 200 :content-type "application/json" :body (slurp (io/resource "my2.json"))})]
+        (fake-route! fake-server {:path "/y" :query {:q "something")}} {:status 200 :content-type "application/json" :body (slurp (io/resource "my2.json"))})]
         ; Do actual HTTP request
          (shutdown! fake-server))
 ```
