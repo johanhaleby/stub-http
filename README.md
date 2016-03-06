@@ -3,10 +3,10 @@
 A Clojure library designed to fake HTTP responses regardless of which library used to actually make the HTTP requests.
   
 There are several library specific "http faking" libraries out there such as [clj-http-fake](https://github.com/myfreeweb/clj-http-fake) and 
-[ring-mock](https://github.com/ring-clojure/ring-mock) but they own work if you're using a specific library. I couldn't find a library agnostic library for 
-faking HTTP responses so I sat out the write one myself based on MockWebServer in [okhttp](http://square.github.io/okhttp/). This is useful
-if you want to test your app against a "real" HTTP server with actual HTTP requests. And even if you don't _want_ to do it it may be your only
-option if you're (for example) your clojure app is using a Java library to make HTTP requests.
+[ring-mock](https://github.com/ring-clojure/ring-mock) but they won't work unless you're using a specific library. I couldn't find a library agnostic library for 
+faking HTTP responses so I sat out to write one myself based on MockWebServer in [okhttp](http://square.github.io/okhttp/). This is useful
+if you want to test your app against a "real" HTTP server with actual HTTP requests. And even if you don't _want_ to this it may be your only
+option if you're (for example) is using a Java library that makes HTTP requests and you want to fake its responses.
 
 More docs and implementation is coming soon.
 
