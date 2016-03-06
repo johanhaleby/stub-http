@@ -1,7 +1,6 @@
 (ns fake-http.fake
-  (:import (okhttp3.mockwebserver MockWebServer Dispatcher MockResponse RecordedRequest)
-           (fake_http.fake FakeServer))
-  (:require [clojure.string :refer [split blank? subst]]))
+  (:import (okhttp3.mockwebserver MockWebServer Dispatcher MockResponse RecordedRequest))
+  (:require [clojure.string :refer [split blank?]]))
 
 (defn- index-of [coll item]
   "Get the index of an item in a collection"
