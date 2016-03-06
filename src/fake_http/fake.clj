@@ -63,20 +63,21 @@
       (.setHeader fake-response (first header) (second header)))
     fake-response))
 
-(defn- fake-route-matching? [query-params route]
+(defn- route-matches? [query-params route]
   (let [route-matcher (:route-matcher route)
         query-params-that-must-match (or (:query route-matcher) {})]
     (if (zero? (count query-params-that-must-match))
       route
       (some #(if (= (get query-params (key %)) (val %)) route) query-params-that-must-match))))
 
-(defn- best-matching-route [potential-responses request-path]
-  "Matches the best "
-  (condp = (count potential-responses)
-    0 nil
-    (let [query-map (request-path->map request-path)
-          matching-response (some (partial fake-route-matching? query-map) potential-responses)]
-      matching-response)))
+(defn- best-matching-route [route-candidates request-path]
+  "Matches the best matching route of a list of route candidates"
+  (if (zero? (count route-candidates))
+    nil
+    (let [sorted-route-candidates (sort-by #(count (->> % :route-matcher :query)) > route-candidates) ; Sort by number of query parameters descending so that the most specific route is tried first
+          query-map (request-path->map request-path)
+          matching-route (some (partial route-matches? query-map) sorted-route-candidates)]
+      matching-route)))
 
 (defn- record-received-request [request fake-route]
   (fn [fake-routes] (let [matching-route-matcher (:route-matcher fake-route)
