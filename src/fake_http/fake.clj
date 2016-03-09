@@ -12,6 +12,10 @@
       str
       (.substring str (inc index-of-after)))))
 
+(defn map-vals [f m]
+  "Maps the values in a map with the function f"
+  (into {} (for [[k v] m] [k (f v)])))
+
 (defn- keywordize-keys
   "Recursively transforms all map keys from strings to keywords."
   [m]
@@ -79,18 +83,24 @@
           matching-route (some (partial route-matches? query-map) sorted-route-candidates)]
       matching-route)))
 
-(defn- record-received-request [request fake-route]
-  (fn [fake-routes] (let [matching-route-matcher (:route-matcher fake-route)
-                          route-matchers (map #(:route-matcher %) fake-routes)
-                          matching-route-index (index-of route-matchers matching-route-matcher)
-                          body (.getUtf8Body request)
-                          recored-request {:method       (.getMethod request)
-                                           :request-line (.getRequestLine request)
-                                           :path         (.getPath request)
-                                           :body         body
-                                           :query-params (request-path->map (.getPath request))
-                                           :form-params  (params->map body)}]
-                      (update-in fake-routes [matching-route-index :recorded-requests] conj recored-request))))
+(defn- record-received-request [request matching-route routes]
+  (let [matching-route-matcher (:route-matcher matching-route)
+        route-matchers (map #(:route-matcher %) routes)
+        matching-route-index (index-of route-matchers matching-route-matcher)
+        body (.getUtf8Body request)
+        recored-request {:method       (.getMethod request)
+                         :headers      (->> (.getHeaders request)
+                                            (.toMultimap)
+                                            ; Create a clojure map of the multimap.
+                                            ; The multimap contains a list as value and thus we map it to a clojure vector
+                                            (map-vals vec)
+                                            (keywordize-keys))
+                         :request-line (.getRequestLine request)
+                         :path         (.getPath request)
+                         :body         body
+                         :query        (request-path->map (.getPath request))
+                         :form         (params->map body)}]
+    (update-in routes [matching-route-index :recorded-requests] conj recored-request)))
 
 (defn- create-dispatcher [fake-routes]
   "Create a MockWebServer dispatcher that will return the same response over and over on match"
@@ -103,7 +113,7 @@
             best-matching-route (best-matching-route routes-matching-path request-path)]
         (if-not (nil? best-matching-route)
           ; Record the received request to the matched mock route
-          (swap! fake-routes (record-received-request request best-matching-route)))
+          (reset! fake-routes (record-received-request request best-matching-route @fake-routes)))
         (or (:response best-matching-route) (fake-response {:status 500}))))))
 
 (defprotocol FakeServer
