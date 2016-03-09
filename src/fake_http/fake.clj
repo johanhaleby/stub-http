@@ -1,6 +1,6 @@
 (ns fake-http.fake
   (:import (okhttp3.mockwebserver MockWebServer Dispatcher MockResponse RecordedRequest))
-  (:require [clojure.string :refer [split blank?]]))
+  (:require [clojure.string :refer [split blank? lower-case]]))
 
 (defn- index-of [coll item]
   "Get the index of an item in a collection"
@@ -12,9 +12,11 @@
       str
       (.substring str (inc index-of-after)))))
 
-(defn map-vals [f m]
-  "Maps the values in a map with the function f"
-  (into {} (for [[k v] m] [k (f v)])))
+(defn map-kv [fk fv m]
+  "Maps the keys and values in a map with the supplied functions.
+  fk = the function for the keys
+  fv = the function for the values"
+  (into {} (for [[k v] m] [(fk k) (fv v)])))
 
 (defn- keywordize-keys
   "Recursively transforms all map keys from strings to keywords."
@@ -93,8 +95,8 @@
                                             (.toMultimap)
                                             ; Create a clojure map of the multimap.
                                             ; The multimap contains a list as value and thus we map it to a clojure vector
-                                            (map-vals vec)
-                                            (keywordize-keys))
+                                            (map-kv lower-case vec))
+                         :content-type (last (get :headers "content-type"))
                          :request-line (.getRequestLine request)
                          :path         (.getPath request)
                          :body         body
