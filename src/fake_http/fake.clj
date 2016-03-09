@@ -126,7 +126,7 @@
     (.setDispatcher fake-web-server dispatcher)
     fake-web-server))
 
-(defn start! []
+(defn start!
   "Start a new fake web server on a random free port. Usage example:
 
   (let [fake-server (fake-server/start!)
@@ -134,6 +134,7 @@
         (fake-route! fake-server {:path \"/y\" :query {:q \"something\")}} {:status 200 :content-type \"application/json\" :body (slurp (io/resource \"my2.json\"))})]
         ; Do actual HTTP request
          (shutdown! fake-server))"
+  []
   (let [fake-routes (atom [])
         dispatcher (create-dispatcher fake-routes)
         fake-web-server (new-fake-web-server dispatcher)
@@ -152,3 +153,16 @@
           recorded-requests))
       (fake-route! [_ route-matcher response]
         (record-route! fake-routes route-matcher response)))))
+
+(defmacro with-fake-routes!
+  "Applies routes and creates and stops a fake server implicitly"
+  [routes & body]
+  `(let [routes# ~routes]
+     (assert (map? routes#))
+     (let [server# (start!)
+           ~'uri (uri server#)]
+       (doseq [[k# v#] routes#]
+         (fake-route! server# k# v#))
+       (try ~@body
+            (finally
+              (shutdown! server#))))))
