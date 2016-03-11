@@ -4,7 +4,7 @@ A Clojure library designed to fake HTTP responses regardless of which library us
   
 There are several library specific "http faking" libraries out there such as [clj-http-fake](https://github.com/myfreeweb/clj-http-fake) and 
 [ring-mock](https://github.com/ring-clojure/ring-mock) but they won't work unless you're using a specific library. I couldn't find a library agnostic library for 
-faking HTTP responses so I sat out to write one myself based on MockWebServer in [okhttp](http://square.github.io/okhttp/). This is useful
+faking HTTP responses so I sat out to write one myself based on [nanohttpd](https://github.com/NanoHttpd/nanohttpd). This is useful
 if you want to test your app against a "real" HTTP server with actual HTTP requests. And even if you don't _want_ to this it may be your only
 option if you're (for example) is using a Java library that makes HTTP requests and you want to fake its responses.
 
@@ -13,13 +13,12 @@ More docs and implementation is coming soon.
 ## Usage
 
 ```clojure
-(let [fake-server (fake-server/start!)
-        (fake-route! fake-server "/x" {:status 200 :content-type "application/json" :body (slurp (io/resource "my.json"))})
-        (fake-route! fake-server {:path "/y" :query {:q "something")}} {:status 200 :content-type "application/json" :body (slurp (io/resource "my2.json"))})]
-        ; Do actual HTTP request
-         (shutdown! fake-server))
+(with-routes! 
+	{"something" {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"})}
+	 {:path "/y" :query {:q "something")}} {:status 200 :content-type "application/json" :body  (json/generate-string {:hello "brave new world"})}}
+	 ; Do actual HTTP request
+	 )
 ```
-
 
 ## License
 

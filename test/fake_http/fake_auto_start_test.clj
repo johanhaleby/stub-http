@@ -6,9 +6,9 @@
 
 (deftest FakeWebServerMacro
   (testing "matches string path"
-    (with-fake-routes!
+    (with-routes!
       {"/something" {:status 200 :content-type "application/json"
-                     :body (json/generate-string {:hello "world"})}}
+                     :body   (json/generate-string {:hello "world"})}}
       (let [response (client/get (str uri "/something"))
             json-response (json/parse-string (:body response) true)]
         (is (= "world" (:hello json-response)))))))

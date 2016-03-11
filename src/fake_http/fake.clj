@@ -1,16 +1,10 @@
 (ns fake-http.fake
-  (:import (okhttp3.mockwebserver MockWebServer Dispatcher MockResponse RecordedRequest))
-  (:require [clojure.string :refer [split blank? lower-case]]))
-
-(defn- index-of [coll item]
-  "Get the index of an item in a collection"
-  (count (take-while (partial not= item) coll)))
-
-(defn- substring-after [str after]
-  (let [index-of-after (.indexOf str after)]
-    (if (= -1 index-of-after)
-      str
-      (.substring str (inc index-of-after)))))
+  (:import (fi.iki.elonen NanoHTTPD NanoHTTPD$IHTTPSession NanoHTTPD$Response$Status NanoHTTPD$Response$IStatus)
+           (clojure.lang IFn IPersistentMap PersistentArrayMap)
+           (java.net ServerSocket)
+           (java.util HashMap))
+  (:require [clojure.string :refer [split blank? lower-case]]
+            [clojure.test :refer [function?]]))
 
 (defn map-kv [fk fv m]
   "Maps the keys and values in a map with the supplied functions.
@@ -45,29 +39,25 @@
           param-list (flatten params-as-tuples)]
       (keywordize-keys (apply hash-map param-list)))))
 
-(defn- request-path->map [request-path]
-  "Takes a request path and transforms it into a map of its query parameters. Returns an empty map if no query parameters are defined"
-  (if (.contains request-path "?")
-    (let [param-string (substring-after request-path "?")]
-      (params->map param-string))
-    {}))
-
 (defn- fake-response [{:keys [status headers body content-type]}]
-  "Create a \"fake response\" (MockResponse) from the given map.
+  "Create a nano-httpd Response from the given map.
 
    path - The request path to mock, for example /search
    status - The status code
    headers - The response headers (list or vector of tuples specifying headers). For example ([\"Content-Type\" \"application/json\"], ...)
    body - The response body"
+  (let [; We see if a predefined status exists for the supplied status code
+        istatus (first (filter #(= (.getRequestStatus %) status) (NanoHTTPD$Response$Status/values)))
+        ; If no match then we create a custom implementation of IStatus with the supplied status
+        istatus (or istatus (reify NanoHTTPD$Response$IStatus
+                              (getDescription [_] "")
+                              (getRequestStatus [_]
+                                status)))
 
-  (let [fake-response (MockResponse.)]
-    (doto fake-response
-      (.setResponseCode status))
-    (if-not (nil? body) (.setBody fake-response body))
-    (if-not (nil? content-type) (.setHeader fake-response "Content-Type" content-type))
-    (doseq [header (or headers [])]
-      (.setHeader fake-response (first header) (second header)))
-    fake-response))
+        nano-response (NanoHTTPD/newFixedLengthResponse istatus content-type body)]
+    (for [[name value] headers]
+      (.addHeader nano-response name value))
+    nano-response))
 
 (defn- route-matches? [query-params route]
   (let [route-matcher (:route-matcher route)
@@ -76,105 +66,116 @@
       route
       (some #(if (= (get query-params (key %)) (val %)) route) query-params-that-must-match))))
 
-(defn- best-matching-route [route-candidates request-path]
-  "Matches the best matching route of a list of route candidates"
-  (if (zero? (count route-candidates))
-    nil
-    (let [sorted-route-candidates (sort-by #(count (->> % :route-matcher :query)) > route-candidates) ; Sort by number of query parameters descending so that the most specific route is tried first
-          query-map (request-path->map request-path)
-          matching-route (some (partial route-matches? query-map) sorted-route-candidates)]
-      matching-route)))
+(defn- route->request-spec [fake-http-request {:keys [request-spec-fn]}]
+  (request-spec-fn fake-http-request))
 
-(defn- record-received-request [request matching-route routes]
-  (let [matching-route-matcher (:route-matcher matching-route)
-        route-matchers (map #(:route-matcher %) routes)
-        matching-route-index (index-of route-matchers matching-route-matcher)
-        body (.getUtf8Body request)
-        recored-request {:method       (.getMethod request)
-                         :headers      (->> (.getHeaders request)
-                                            (.toMultimap)
-                                            ; Create a clojure map of the multimap.
-                                            ; The multimap contains a list as value and thus we map it to a clojure vector
-                                            (map-kv lower-case vec))
-                         :content-type (last (get :headers "content-type"))
-                         :request-line (.getRequestLine request)
-                         :path         (.getPath request)
-                         :body         body
-                         :query        (request-path->map (.getPath request))
-                         :form         (params->map body)}]
-    (update-in routes [matching-route-index :recorded-requests] conj recored-request)))
+(defn- http-session->fake-http-request
+  "Converts an instance of IHTTPSession to a \"fake-http\" representation of a request"
+  [^NanoHTTPD$IHTTPSession session]
+  (let [body-map (HashMap.)
+        _ (.parseBody session body-map)
+        ; Convert java hashmap into a clojure map
+        body-map (into {} body-map)]
+    {:method       (->> session .getMethod .toString)
+     :headers      (->> (.getHeaders session)
+                        ; The multimap contains a list as value and thus we map it to a clojure vector
+                        (map-kv lower-case vec))
+     :content-type (last (get :headers "content-type"))
+     :request-line (.getParms session)
+     :path         (.getUri session)
+     :body         body-map
+     :query        (params->map (.getQueryParameterString session))
+     #_:form         #_(params->map body)}))
 
-(defn- create-dispatcher [fake-routes]
-  "Create a MockWebServer dispatcher that will return the same response over and over on match"
-  (proxy [Dispatcher] []
-    (dispatch [^RecordedRequest request]
-      (let [request-path (.getPath request)
-            request-path-no-params (substring-before request-path "?")
-            matches-request-path-fn #(= (->> % :route-matcher :path) request-path-no-params)
-            routes-matching-path (filter matches-request-path-fn @fake-routes)
-            best-matching-route (best-matching-route routes-matching-path request-path)]
-        (if-not (nil? best-matching-route)
-          ; Record the received request to the matched mock route
-          (reset! fake-routes (record-received-request request best-matching-route @fake-routes)))
-        (or (:response best-matching-route) (fake-response {:status 500}))))))
+(defn- new-nano-server! [port routes]
+  "Create a nano server instance that will return the same response over and over on match"
+  (proxy [NanoHTTPD] [port]
+    (serve [^NanoHTTPD$IHTTPSession session]
+      (let [routes @routes
+            fake-http-request (http-session->fake-http-request session)
+            routes-matching-request (filter (partial route->request-spec fake-http-request) routes)
+            matching-route-count (count routes-matching-request)]
+        (cond
+          (> matching-route-count 1) (throw (ex-info "Failed to determine response since several routes match" {:routes routes}))
+          ; TODO Make this configurable by allowing to determine what should happen by supplying a :default response
+          (= matching-route-count 0) (throw (ex-info "Failed to determine response since no route matches" {:routes routes})))
+        (let [response-fn (:response-spec-fn (first routes-matching-request))
+              response-spec (response-fn fake-http-request)]
+          (fake-response response-spec))))))
+
+(defn- record-route! [fake-routes route-matcher-fn response-fn]
+  (swap! fake-routes conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn}))
+
+(defn- request-spec-matches? [request-spec request]
+  (letfn [(path-without-query-params [path]
+            (substring-before path "?"))
+          (path-matches? [expected-path actual-path]
+            (= (or expected-path actual-path) actual-path))
+          (query-param-matches? [expected-params actual-params]
+            (let [expected-params (or expected-params {})   ; Assume empty map if nil
+                  query-params-to-match (select-keys actual-params (keys expected-params))]
+              (= expected-params query-params-to-match)))]
+    (and (apply path-matches? (map (comp path-without-query-params :path) [request-spec request]))
+         (query-param-matches? (:query request-spec) (:query request)))))
+
+(defmulti normalize-request-spec class)
+(defmethod normalize-request-spec IFn [req-fn] req-fn)
+(defmethod normalize-request-spec IPersistentMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
+(defmethod normalize-request-spec PersistentArrayMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
+(defmethod normalize-request-spec String [path] (normalize-request-spec {:path path}))
+(defmethod normalize-request-spec :default [_] (throw (ex-info "error" {})))
+
+(defmulti normalize-response-spec class)
+(defmethod normalize-response-spec IFn [resp-fn] resp-fn)
+(defmethod normalize-response-spec IPersistentMap [resp-map] (fn [_] resp-map))
+(defmethod normalize-response-spec PersistentArrayMap [resp-map] (fn [_] resp-map))
+(defmethod normalize-response-spec String [path] (fn [_] {:body path}))
+(defmethod normalize-response-spec :default [_] (throw (ex-info "error" {})))
+
+
+(defn- get-free-port! []
+  (let [socket (ServerSocket. 0)
+        port (.getLocalPort socket)]
+    (.close socket)
+    port))
 
 (defprotocol FakeServer
-  (uri [this])
-  (recorded-requests [this route-matcher])
-  (fake-route! [this route-matcher response])
+  (add-route! [this route-matcher response])
   (shutdown! [this]))
 
-(defn- record-route! [fake-routes route-matcher response]
-  (let [fake-response (fake-response response)]
-    (swap! fake-routes conj {:route-matcher     (if (map? route-matcher)
-                                                  route-matcher
-                                                  {:path route-matcher})
-                             :response          fake-response
-                             :recorded-requests []})))
-
-(defn- new-fake-web-server [dispatcher]
-  "Creates a new fake web server with the supplied dispatcher"
-  (let [fake-web-server (MockWebServer.)]
-    (.setDispatcher fake-web-server dispatcher)
-    fake-web-server))
+(defrecord NanoFakeServer [nano-server routes]
+  FakeServer
+  (shutdown! [_]
+    (.stop nano-server))
+  (add-route! [_ route-matcher response]
+    (record-route! routes (normalize-request-spec route-matcher) (normalize-response-spec response))))
 
 (defn start!
   "Start a new fake web server on a random free port. Usage example:
 
-  (let [fake-server (fake-server/start!)
-        (fake-route! fake-server \"/x\" {:status 200 :content-type \"application/json\" :body (slurp (io/resource \"my.json\"))})
-        (fake-route! fake-server {:path \"/y\" :query {:q \"something\")}} {:status 200 :content-type \"application/json\" :body (slurp (io/resource \"my2.json\"))})]
-        ; Do actual HTTP request
-         (shutdown! fake-server))"
+  (with-routes!
+         {\"something\" {:status 200 :content-type \"application/json\" :body (json/generate-string {:hello \"world\"})}
+         {:path \"/y\" :query {:q \"something\")}} {:status 200 :content-type \"application/json\" :body  (json/generate-string {:hello \"brave new world\"})}}
+         ; Do actual HTTP request
+         )"
   []
-  (let [fake-routes (atom [])
-        dispatcher (create-dispatcher fake-routes)
-        fake-web-server (new-fake-web-server dispatcher)
-        _ (.start fake-web-server)
-        web-server-port (.getPort fake-web-server)
-        web-server-host (.getHostName fake-web-server)
-        uri (str "http://" web-server-host ":" web-server-port)]
-    (reify FakeServer
-      (shutdown! [_]
-        (.shutdown fake-web-server))
-      (uri [_]
-        uri)
-      (recorded-requests [_ route-matcher]
-        (let [fake-route (some #(if (= (:route-matcher %) route-matcher) %) @fake-routes)
-              recorded-requests (:recorded-requests fake-route)]
-          recorded-requests))
-      (fake-route! [_ route-matcher response]
-        (record-route! fake-routes route-matcher response)))))
+  (let [routes (atom [])
+        nano-server (new-nano-server! (get-free-port!) routes)
+        _ (.start nano-server)
+        uri (str "http://localhost:" (.getListeningPort nano-server))]
+    (map->NanoFakeServer {:uri uri :nano-server nano-server :routes routes})))
 
-(defmacro with-fake-routes!
+(defmacro with-routes!
   "Applies routes and creates and stops a fake server implicitly"
   [routes & body]
   `(let [routes# ~routes]
      (assert (map? routes#))
      (let [server# (start!)
-           ~'uri (uri server#)]
+           ~'uri (:uri server#)]
        (doseq [[k# v#] routes#]
-         (fake-route! server# k# v#))
-       (try ~@body
-            (finally
-              (shutdown! server#))))))
+         (add-route! server# k# v#))
+       (let [shutdown-server# #(shutdown! server#)]
+         (try
+           ~@body
+           (finally
+             (shutdown-server#)))))))

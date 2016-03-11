@@ -15,22 +15,16 @@
 
 (use-fixtures :each start-and-stop-fake-server)
 
-(deftest FakeWebServer
+(deftest MatchesStringPath
   (testing "matches string path"
-    (fake-route! *fake-server* "/something" {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"})})
-    (let [response (client/get (str (uri *fake-server*) "/something"))
+    (add-route! *fake-server* "/something" {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"})})
+    (let [response (client/get (str (:uri *fake-server*) "/something"))
           json-response (json/parse-string (:body response) true)]
-      (is (= "world" (:hello json-response)))))
+      (is (= "world" (:hello json-response))))))
 
+(deftest MatchesSpecificQueryParam
   (testing "matches path with specific single query param"
-    (fake-route! *fake-server* {:path "/something" :query {:first "value1"}} {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world2"})})
-    (let [response (client/get (str (uri *fake-server*) "/something?first=value1"))
-          json-response (json/parse-string (:body response) true)]
-      (is (= "world2" (:hello json-response)))))
-
-  (testing "matches path with most specific single query param"
-    (fake-route! *fake-server* {:path "/something"} {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world1"})})
-    (fake-route! *fake-server* {:path "/something" :query {:first "value1"}} {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world2"})})
-    (let [response (client/get (str (uri *fake-server*) "/something?first=value1"))
+    (add-route! *fake-server* {:path "/something" :query {:first "value1"}} {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world2"})})
+    (let [response (client/get (str (:uri *fake-server*) "/something?first=value1"))
           json-response (json/parse-string (:body response) true)]
       (is (= "world2" (:hello json-response))))))
