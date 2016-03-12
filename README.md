@@ -48,6 +48,10 @@ as response:
         (is (= "world" (:hello json-response))))))
 ```
 
+## Project Status
+
+The project is in an early phase and changes are expected
+
 ## License
 
 Copyright (c) 2016 Johan Haleby
