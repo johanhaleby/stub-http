@@ -59,13 +59,6 @@
       (.addHeader nano-response name value))
     nano-response))
 
-(defn- route-matches? [query-params route]
-  (let [route-matcher (:route-matcher route)
-        query-params-that-must-match (or (:query route-matcher) {})]
-    (if (zero? (count query-params-that-must-match))
-      route
-      (some #(if (= (get query-params (key %)) (val %)) route) query-params-that-must-match))))
-
 (defn- route->request-spec [fake-http-request {:keys [request-spec-fn]}]
   (request-spec-fn fake-http-request))
 
