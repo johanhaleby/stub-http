@@ -1,4 +1,4 @@
-# fake-http
+# fake-http [![Build Status](https://travis-ci.org/johanhaleby/fake-http.svg?branch=master)](https://travis-ci.org/johanhaleby/fake-http)
 
 A Clojure library designed to fake HTTP responses regardless of which library used to actually make the HTTP requests.
   
