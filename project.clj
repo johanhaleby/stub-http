@@ -1,6 +1,6 @@
 (defproject fake-http "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "A client library agonistic way to fake HTTP responses"
+  :url "https://github.com/johanhaleby/fake-http"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :min-lein-version "2.0.0"
