@@ -20,6 +20,34 @@ More docs and implementation is coming soon.
 	 )
 ```
 
+## Full Examples
+
+### Example 1
+Example demonstrating integration with clojure test and [clj-http-lite](https://github.com/hiredman/clj-http-lite). 
+This example matches path "/something" and returns the json document
+     
+```javascript
+{ "hello" : "world" }
+```
+
+as response: 
+
+```clojure
+(ns fake-http.example1
+  (:require [clojure.test :refer :all]
+            [fake-http.fake :refer :all]
+            [cheshire.core :as json]
+            [clj-http.lite.client :as client]))
+
+(deftest Example1  
+    (with-routes!
+      {"/something" {:status 200 :content-type "application/json"
+                     :body   (json/generate-string {:hello "world"})}}
+      (let [response (client/get (str uri "/something"))
+            json-response (json/parse-string (:body response) true)]
+        (is (= "world" (:hello json-response))))))
+```
+
 ## License
 
 Copyright © 2016 Johan Haleby
