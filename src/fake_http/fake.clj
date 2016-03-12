@@ -77,7 +77,7 @@
      :request-line (.getParms session)
      :path         (.getUri session)
      :body         body-map
-     :query        (params->map (.getQueryParameterString session))}))
+     :query-params        (params->map (.getQueryParameterString session))}))
 
 (defn- new-nano-server! [port routes]
   "Create a nano server instance that will return the same response over and over on match"
@@ -108,7 +108,7 @@
                   query-params-to-match (select-keys actual-params (keys expected-params))]
               (= expected-params query-params-to-match)))]
     (and (apply path-matches? (map (comp path-without-query-params :path) [request-spec request]))
-         (query-param-matches? (:query request-spec) (:query request)))))
+         (query-param-matches? (:query-params request-spec) (:query-params request)))))
 
 (defmulti normalize-request-spec class)
 (defmethod normalize-request-spec IFn [req-fn] req-fn)
@@ -147,7 +147,7 @@
 
   (with-routes!
          {\"something\" {:status 200 :content-type \"application/json\" :body (json/generate-string {:hello \"world\"})}
-         {:path \"/y\" :query {:q \"something\")}} {:status 200 :content-type \"application/json\" :body  (json/generate-string {:hello \"brave new world\"})}}
+         {:path \"/y\" :query-params {:q \"something\")}} {:status 200 :content-type \"application/json\" :body  (json/generate-string {:hello \"brave new world\"})}}
          ; Do actual HTTP request
          )"
   []

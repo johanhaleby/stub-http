@@ -15,7 +15,7 @@ More docs and implementation is coming soon.
 ```clojure
 (with-routes! 
 	{"something" {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"})}
-	 {:path "/y" :query {:q "something")}} {:status 200 :content-type "application/json" :body  (json/generate-string {:hello "brave new world"})}}
+	 {:path "/y" :query-params {:q "something")}} {:status 200 :content-type "application/json" :body  (json/generate-string {:hello "brave new world"})}}
 	 ; Do actual HTTP request
 	 )
 ```
