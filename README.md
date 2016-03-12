@@ -1,4 +1,4 @@
-# fake-http [![Build Status](https://travis-ci.org/johanhaleby/fake-http.svg?branch=master)](https://travis-ci.org/johanhaleby/fake-http)
+# fake-http [![Build Status](https://travis-ci.org/johanhaleby/fake-http.svg?branch=master)](https://travis-ci.org/johanhaleby/fake-http) ![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit)
 
 A Clojure library designed to fake HTTP responses regardless of which library used to actually make the HTTP requests.
   
@@ -50,7 +50,8 @@ as response:
 
 ## License
 
-Copyright © 2016 Johan Haleby
+Copyright (c) 2016 Johan Haleby
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Released under [the MIT License](http://www.opensource.org/licenses/mit-license.php).
+
+## [Contributors](https://github.com/myfreeweb/clj-http-fake/contributors)
