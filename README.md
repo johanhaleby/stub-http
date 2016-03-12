@@ -54,4 +54,4 @@ Copyright (c) 2016 Johan Haleby
 
 Released under [the MIT License](http://www.opensource.org/licenses/mit-license.php).
 
-## [Contributors](https://github.com/myfreeweb/clj-http-fake/contributors)
+## [Contributors](https://github.com/johanhaleby/fake-http/contributors)
