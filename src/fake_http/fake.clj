@@ -77,8 +77,7 @@
      :request-line (.getParms session)
      :path         (.getUri session)
      :body         body-map
-     :query        (params->map (.getQueryParameterString session))
-     #_:form         #_(params->map body)}))
+     :query        (params->map (.getQueryParameterString session))}))
 
 (defn- new-nano-server! [port routes]
   "Create a nano server instance that will return the same response over and over on match"
