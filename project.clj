@@ -3,6 +3,7 @@
   :url "https://github.com/johanhaleby/fake-http"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
+  :lein-release {:deploy-via :clojars}
   :min-lein-version "2.0.0"
   :dependencies [[org.nanohttpd/nanohttpd "2.3.0"]]
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.8.0"]
