@@ -1,4 +1,4 @@
-(defproject fake-http "0.1.0-SNAPSHOT"
+(defproject se.haleby/fake-http "0.1.0-SNAPSHOT"
   :description "A client library agonistic way to fake HTTP responses"
   :url "https://github.com/johanhaleby/fake-http"
   :license {:name "Eclipse Public License"
