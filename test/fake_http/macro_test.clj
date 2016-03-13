@@ -1,4 +1,4 @@
-(ns fake-http.fake-auto-start-test
+(ns fake-http.macro-test
   (:require [clojure.test :refer :all]
             [fake-http.fake :refer :all]
             [cheshire.core :as json]

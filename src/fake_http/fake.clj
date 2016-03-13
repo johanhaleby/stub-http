@@ -2,7 +2,8 @@
   (:import (fi.iki.elonen NanoHTTPD NanoHTTPD$IHTTPSession NanoHTTPD$Response$Status NanoHTTPD$Response$IStatus)
            (clojure.lang IFn IPersistentMap PersistentArrayMap)
            (java.net ServerSocket)
-           (java.util HashMap))
+           (java.util HashMap)
+           (java.io Closeable))
   (:require [clojure.string :refer [split blank? lower-case]]
             [clojure.test :refer [function?]]))
 
@@ -71,13 +72,12 @@
         body-map (into {} body-map)]
     {:method       (->> session .getMethod .toString)
      :headers      (->> (.getHeaders session)
-                        ; The multimap contains a list as value and thus we map it to a clojure vector
                         (map-kv lower-case vec))
      :content-type (last (get :headers "content-type"))
      :request-line (.getParms session)
      :path         (.getUri session)
      :body         body-map
-     :query-params        (params->map (.getQueryParameterString session))}))
+     :query-params (params->map (.getQueryParameterString session))}))
 
 (defn- new-nano-server! [port routes]
   "Create a nano server instance that will return the same response over and over on match"
@@ -95,8 +95,8 @@
               response-spec (response-fn fake-http-request)]
           (fake-response response-spec))))))
 
-(defn- record-route! [fake-routes route-matcher-fn response-fn]
-  (swap! fake-routes conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn}))
+(defn- record-route! [route-state route-matcher-fn response-fn]
+  (swap! route-state conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn}))
 
 (defn- request-spec-matches? [request-spec request]
   (letfn [(path-without-query-params [path]
@@ -110,20 +110,24 @@
     (and (apply path-matches? (map (comp path-without-query-params :path) [request-spec request]))
          (query-param-matches? (:query-params request-spec) (:query-params request)))))
 
+(defn- throw-normalize-exception! [type val]
+  (let [class-name (-> val .getClass .getName)
+        error-message (str "Internal error: Couldn't find " type " conversion strategy for class " (-> val .getClass .getName))]
+    (throw (ex-info error-message {:class class-name :value val}))))
+
 (defmulti normalize-request-spec class)
 (defmethod normalize-request-spec IFn [req-fn] req-fn)
 (defmethod normalize-request-spec IPersistentMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
 (defmethod normalize-request-spec PersistentArrayMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
 (defmethod normalize-request-spec String [path] (normalize-request-spec {:path path}))
-(defmethod normalize-request-spec :default [_] (throw (ex-info "error" {})))
+(defmethod normalize-request-spec :default [value] (throw-normalize-exception! "request" value))
 
 (defmulti normalize-response-spec class)
 (defmethod normalize-response-spec IFn [resp-fn] resp-fn)
 (defmethod normalize-response-spec IPersistentMap [resp-map] (fn [_] resp-map))
 (defmethod normalize-response-spec PersistentArrayMap [resp-map] (fn [_] resp-map))
-(defmethod normalize-response-spec String [path] (fn [_] {:body path}))
-(defmethod normalize-response-spec :default [_] (throw (ex-info "error" {})))
-
+(defmethod normalize-response-spec String [body] (fn [_] {:status 200 :content-type "text/plain" :headers {:content-type "text/plain"} :body body}))
+(defmethod normalize-response-spec :default [value] (throw-normalize-exception! "response" value))
 
 (defn- get-free-port! []
   (let [socket (ServerSocket. 0)
@@ -131,43 +135,37 @@
     (.close socket)
     port))
 
-(defprotocol FakeServer
-  (add-route! [this route-matcher response])
-  (shutdown! [this]))
-
 (defrecord NanoFakeServer [nano-server routes]
-  FakeServer
-  (shutdown! [_]
-    (.stop nano-server))
-  (add-route! [_ route-matcher response]
-    (record-route! routes (normalize-request-spec route-matcher) (normalize-response-spec response))))
+  Closeable
+  (close [_]
+    (println "Closing" (.getListeningPort nano-server))
+    (.stop nano-server)))
 
 (defn start!
   "Start a new fake web server on a random free port. Usage example:
 
-  (with-routes!
+  (with-open [server (start!
          {\"something\" {:status 200 :content-type \"application/json\" :body (json/generate-string {:hello \"world\"})}
-         {:path \"/y\" :query-params {:q \"something\")}} {:status 200 :content-type \"application/json\" :body  (json/generate-string {:hello \"brave new world\"})}}
+         {:path \"/y\" :query-params {:q \"something\")}} {:status 200 :content-type \"application/json\" :body  (json/generate-string {:hello \"brave new world\"})}})]
          ; Do actual HTTP request
          )"
-  []
-  (let [routes (atom [])
-        nano-server (new-nano-server! (get-free-port!) routes)
-        _ (.start nano-server)
-        uri (str "http://localhost:" (.getListeningPort nano-server))]
-    (map->NanoFakeServer {:uri uri :nano-server nano-server :routes routes})))
+  ([routes] (start! {} routes))
+  ([settings routes]
+   {:pre [(map? settings) (map? routes)]}
+   (let [{:keys [port] :or {port (get-free-port!)}} settings
+         route-state (atom [])
+         normalized-routes (map-kv normalize-request-spec normalize-response-spec routes)
+         nano-server (new-nano-server! port route-state)
+         _ (.start nano-server)
+         uri (str "http://localhost:" (.getListeningPort nano-server))]
+     (doseq [[req-spec resp-spec] normalized-routes]
+       (record-route! route-state req-spec resp-spec))
+     (map->NanoFakeServer {:uri uri :port port :nano-server nano-server :routes route-state}))))
 
 (defmacro with-routes!
   "Applies routes and creates and stops a fake server implicitly"
   [routes & body]
   `(let [routes# ~routes]
-     (assert (map? routes#))
-     (let [server# (start!)
+     (let [server# (start! routes#)
            ~'uri (:uri server#)]
-       (doseq [[k# v#] routes#]
-         (add-route! server# k# v#))
-       (let [shutdown-server# #(shutdown! server#)]
-         (try
-           ~@body
-           (finally
-             (shutdown-server#)))))))
+       ~@body)))
