@@ -1,4 +1,4 @@
-# fake-http [![Build Status](https://img.shields.io/travis/myfreeweb/clj-http-fake.svg?style=flat)](https://travis-ci.org/johanhaleby/fake-http) [![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit)
+# fake-http [![Clojars Project](https://img.shields.io/clojars/v/se.haleby/fake-http.svg)](https://clojars.org/se.haleby/fake-http) [![Build Status](https://img.shields.io/travis/myfreeweb/clj-http-fake.svg?style=flat)](https://travis-ci.org/johanhaleby/fake-http) [![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit)
 
 A Clojure library designed to fake HTTP responses regardless of which library used to actually make the HTTP requests.
   
