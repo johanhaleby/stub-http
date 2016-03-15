@@ -10,6 +10,12 @@ option if you're (for example) is using a Java library that makes HTTP requests 
 
 More docs and implementation is coming soon.
 
+## Latest version
+
+The latest release version of fake-http is hosted on [Clojars](https://clojars.org):
+
+[![Current Version](https://clojars.org/se.haleby/fake-http/latest-version.svg)](https://clojars.org/se.haleby/fake-http)
+
 ## Usage
 
 ```clojure
