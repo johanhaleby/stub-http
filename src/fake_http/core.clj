@@ -168,4 +168,7 @@
   `(let [routes# ~routes]
      (let [server# (start! routes#)
            ~'uri (:uri server#)]
-       ~@body)))
+       (try
+         ~@body
+         (finally
+           (.close server#))))))
