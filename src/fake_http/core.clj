@@ -138,7 +138,6 @@
 (defrecord NanoFakeServer [nano-server routes]
   Closeable
   (close [_]
-    (println "Closing" (.getListeningPort nano-server))
     (.stop nano-server)))
 
 (defn start!
