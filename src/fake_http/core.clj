@@ -150,16 +150,21 @@
          )"
   ([routes] (start! {} routes))
   ([settings routes]
-   {:pre [(map? settings) (map? routes)]}
+   {:pre [(map? settings) (or (map? routes) (function? routes))]}
    (let [{:keys [port] :or {port (get-free-port!)}} settings
          route-state (atom [])
-         normalized-routes (map-kv normalize-request-spec normalize-response-spec routes)
          nano-server (new-nano-server! port route-state)
          _ (.start nano-server)
-         uri (str "http://localhost:" (.getListeningPort nano-server))]
+         uri (str "http://localhost:" (.getListeningPort nano-server))
+         server (map->NanoFakeServer {:uri uri :port port :nano-server nano-server :routes route-state})
+         routes-map (if (map? routes)
+                      routes
+                      (routes server))
+         _ (assert (map? routes-map))
+         normalized-routes (map-kv normalize-request-spec normalize-response-spec routes-map)]
      (doseq [[req-spec resp-spec] normalized-routes]
        (record-route! route-state req-spec resp-spec))
-     (map->NanoFakeServer {:uri uri :port port :nano-server nano-server :routes route-state}))))
+     server)))
 
 (defmacro with-routes!
   "Applies routes and creates and stops a fake server implicitly"
