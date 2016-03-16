@@ -41,7 +41,7 @@ as response:
 ```clojure
 (ns fake-http.example1
   (:require [clojure.test :refer :all]
-            [fake-http.fake :refer :all]
+            [fake-http.core :refer :all]
             [cheshire.core :as json]
             [clj-http.lite.client :as client]))
 

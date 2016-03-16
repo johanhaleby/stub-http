@@ -1,4 +1,4 @@
-(ns fake-http.fake
+(ns fake-http.core
   (:import (fi.iki.elonen NanoHTTPD NanoHTTPD$IHTTPSession NanoHTTPD$Response$Status NanoHTTPD$Response$IStatus)
            (clojure.lang IFn IPersistentMap PersistentArrayMap)
            (java.net ServerSocket)
