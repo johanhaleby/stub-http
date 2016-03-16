@@ -101,6 +101,12 @@
 (defn- request-spec-matches? [request-spec request]
   (letfn [(path-without-query-params [path]
             (substring-before path "?"))
+          (method-matches? [expected-method actual-method]
+            (let [; Make keyword out of string and never mind "case" of keyword (i.e. :GET and :get are treated the same)
+                  normalize #(->> (if (string? %) % (name %)) .toLowerCase keyword)
+                  expected-normalized (normalize (or expected-method actual-method)) ; Assume same as actual if not present
+                  actual-normalized (normalize actual-method)]
+              (= expected-normalized actual-normalized)))
           (path-matches? [expected-path actual-path]
             (= (or expected-path actual-path) actual-path))
           (query-param-matches? [expected-params actual-params]
@@ -108,7 +114,8 @@
                   query-params-to-match (select-keys actual-params (keys expected-params))]
               (= expected-params query-params-to-match)))]
     (and (apply path-matches? (map (comp path-without-query-params :path) [request-spec request]))
-         (query-param-matches? (:query-params request-spec) (:query-params request)))))
+         (query-param-matches? (:query-params request-spec) (:query-params request))
+         (method-matches? (:method request-spec) (:method request)))))
 
 (defn- throw-normalize-exception! [type val]
   (let [class-name (-> val .getClass .getName)
