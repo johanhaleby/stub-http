@@ -177,23 +177,18 @@
   "Applies routes and creates and stops a fake server implicitly"
   {:arglists '([bindings? routes & body])}
   [bindings-or-routes & more-args]
-  ;{:pre [(vector? bindings) (even? (count bindings))]}
   (let [[bindings routes body] (if (vector? bindings-or-routes)
                                  [bindings-or-routes (first more-args) (rest more-args)]
                                  [[] bindings-or-routes more-args])]
-    (cond
-      (= (count bindings) 0) `(let [server# (start! ~routes)
-                                    ~'uri (:uri server#)]
-                                (try
-                                  ~@body
-                                  (finally
-                                    (.close server#))))
-      (symbol? (bindings 0)) `(let ~bindings
-                                (let [server# (start! ~routes)
-                                      ~'uri (:uri server#)]
-                                  (try
-                                    ~@body
-                                    (finally
-                                      (.close server#)))))
-      :else (throw (IllegalArgumentException.
-                     "with-routes! only allows Symbols in bindings")))))
+
+    (assert (and (vector? bindings)
+                 (even? (count bindings))
+                 (every? symbol? (take-nth 2 bindings))) "Bindings need to be a vector with an even number of forms")
+
+    `(let ~bindings
+       (let [server# (start! ~routes)
+             ~'uri (:uri server#)]
+         (try
+           ~@body
+           (finally
+             (.close server#)))))))
