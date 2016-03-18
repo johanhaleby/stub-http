@@ -187,7 +187,8 @@
 
     `(let ~bindings
        (let [server# (start! ~routes)
-             ~'uri (:uri server#)]
+             ~'uri (:uri server#)
+             ~'server server#]
          (try
            ~@body
            (finally
