@@ -28,7 +28,7 @@ The latest release version of stub-http is hosted on [Clojars](https://clojars.o
 
 ## Full Examples
 
-### Example 1
+### Example 1 - Simple Macro
 Example demonstrating integration with clojure test and [clj-http-lite](https://github.com/hiredman/clj-http-lite). 
 This example matches path "/something" and returns the json document
      
@@ -52,6 +52,55 @@ as response:
       (let [response (client/get (str uri "/something"))
             json-response (json/parse-string (:body response) true)]
         (is (= "world" (:hello json-response))))))
+```
+
+### Example 2 - Explicit Start and Stop
+
+This example matches only a GET request with a query param "name" equal "value" using the `start!` function:
+
+```clojure
+(ns stub-http.example2
+  (:require [clojure.test :refer :all]
+            [stub-http.core :refer :all]
+            [cheshire.core :as json]
+            [clj-http.lite.client :as client]))
+
+(declare ^:dynamic *stub-server*)
+
+(defn start-and-stop-stub-server [f]
+  (binding [*stub-server* (start! {{:method :get :path "/something" :query-params {:name "value"}}
+                                   {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"})}})]
+    (try
+      (f)
+      (finally
+        (.close *stub-server*)))))
+
+(use-fixtures :each start-and-stop-stub-server)
+
+(deftest Example2
+    (let [response (client/get (str (:uri *stub-server*) "/something"))
+          json-response (json/parse-string (:body response) true)]
+      (is (= "world" (:hello json-response)))))
+```
+
+### Example 3 - Using start! and with-open
+
+The `start!` function return a Clojure record that implements [Closable](https://docs.oracle.com/javase/8/docs/api/java/io/Closeable.html). 
+This means that you can use it with the [with-open](https://clojuredocs.org/clojure.core/with-open) macro:
+  
+```clojure
+(ns stub-http.example3
+  (:require [clojure.test :refer :all]
+            [stub-http.core :refer :all]
+            [cheshire.core :as json]
+            [clj-http.lite.client :as client]))
+
+(deftest Example3
+  (with-open [server (start! {"/something" {:status 200 :content-type "application/json"
+                                            :body   (json/generate-string {:hello "world"})}})]
+      (let [response (client/get (str (:uri server) "/something"))
+            json-response (json/parse-string (:body response) true)]
+        (is (= "world" (:hello json-response)))))
 ```
 
 ## Project Status
