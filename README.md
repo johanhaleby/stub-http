@@ -1,4 +1,4 @@
-# stub-http [![Build Status](https://img.shields.io/travis/myfreeweb/clj-http-stub.svg?style=flat)](https://travis-ci.org/johanhaleby/stub-http) [![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit)
+# stub-http [![Build Status](https://img.shields.io/travis/johanhaleby/stub-http.svg?style=flat)](https://travis-ci.org/johanhaleby/stub-http) [![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit)
 
 A Clojure library designed to stub HTTP responses regardless of which library used to actually make the HTTP requests.
   
