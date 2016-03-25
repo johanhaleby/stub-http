@@ -1,6 +1,6 @@
-(ns fake-http.routes-as-fn-test
+(ns stub-http.routes-as-fn-test
   (:require [clojure.test :refer :all]
-            [fake-http.core :refer :all]
+            [stub-http.core :refer :all]
             [cheshire.core :as json]
             [clj-http.lite.client :as client]))
 

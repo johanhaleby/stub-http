@@ -1,4 +1,4 @@
-(ns fake-http.core
+(ns stub-http.core
   (:import (fi.iki.elonen NanoHTTPD NanoHTTPD$IHTTPSession NanoHTTPD$Response$Status NanoHTTPD$Response$IStatus)
            (clojure.lang IFn IPersistentMap PersistentArrayMap)
            (java.net ServerSocket)
@@ -40,7 +40,7 @@
           param-list (flatten params-as-tuples)]
       (keywordize-keys (apply hash-map param-list)))))
 
-(defn- fake-response [{:keys [status headers body content-type]}]
+(defn- stub-response [{:keys [status headers body content-type]}]
   "Create a nano-httpd Response from the given map.
 
    path - The request path to mock, for example /search
@@ -60,11 +60,11 @@
       (.addHeader nano-response name value))
     nano-response))
 
-(defn- route->request-spec [fake-http-request {:keys [request-spec-fn]}]
-  (request-spec-fn fake-http-request))
+(defn- route->request-spec [stub-http-request {:keys [request-spec-fn]}]
+  (request-spec-fn stub-http-request))
 
-(defn- http-session->fake-http-request
-  "Converts an instance of IHTTPSession to a \"fake-http\" representation of a request"
+(defn- http-session->stub-http-request
+  "Converts an instance of IHTTPSession to a \"stub-http\" representation of a request"
   [^NanoHTTPD$IHTTPSession session]
   (let [body-map (HashMap.)
         _ (.parseBody session body-map)
@@ -84,16 +84,16 @@
   (proxy [NanoHTTPD] [port]
     (serve [^NanoHTTPD$IHTTPSession session]
       (let [routes @routes
-            fake-http-request (http-session->fake-http-request session)
-            routes-matching-request (filter (partial route->request-spec fake-http-request) routes)
+            stub-http-request (http-session->stub-http-request session)
+            routes-matching-request (filter (partial route->request-spec stub-http-request) routes)
             matching-route-count (count routes-matching-request)]
         (cond
           (> matching-route-count 1) (throw (ex-info "Failed to determine response since several routes match" {:routes routes}))
           ; TODO Make this configurable by allowing to determine what should happen by supplying a :default response
           (= matching-route-count 0) (throw (ex-info "Failed to determine response since no route matches" {:routes routes})))
         (let [response-fn (:response-spec-fn (first routes-matching-request))
-              response-spec (response-fn fake-http-request)]
-          (fake-response response-spec))))))
+              response-spec (response-fn stub-http-request)]
+          (stub-response response-spec))))))
 
 (defn- record-route! [route-state route-matcher-fn response-fn]
   (swap! route-state conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn}))
