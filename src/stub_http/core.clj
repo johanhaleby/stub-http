@@ -67,6 +67,7 @@
     `(let ~bindings
        (let [server# (start! ~routes)
              ~'uri (:uri server#)
+             ~'port (:port server#)
              ~'server server#]
          (try
            ~@body
