@@ -1,5 +1,5 @@
 (defproject se.haleby/stub-http "0.1.5-SNAPSHOT"
-  :description "A client library agonistic way to fake HTTP responses"
+  :description "A client library agonistic way to stub HTTP responses"
   :url "https://github.com/johanhaleby/stub-http"
   :license {:name         "MIT License"
             :url          "http://www.opensource.org/licenses/mit-license.php"
