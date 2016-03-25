@@ -26,6 +26,10 @@ The latest release version of stub-http is hosted on [Clojars](https://clojars.o
 	 )
 ```
 
+## Documentation
+
+See [wiki](https://github.com/johanhaleby/stub-http/wiki).
+
 ## Full Examples
 
 ### Example 1 - Simple Macro
