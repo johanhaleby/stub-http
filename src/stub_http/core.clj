@@ -28,16 +28,15 @@
 
 (defn- params->map [param-string]
   (if-not (blank? param-string)
-    (let [params-splitted-by-and (split param-string #"&")
+    (let [params-splitted-by-ampersand (split param-string #"&")
           ; Handle no-value parameters. If a no-value parameter is found then use nil as parameter value
-          params-as-tuples (map #(let [index-of-= (.indexOf % "=")]
-                                  (if (and
-                                        (> index-of-= 0)
-                                        ; Check if the first = char is the last char of the param.
-                                        (< (inc index-of-=) (.length %)))
-                                    (split % #"=")
-                                    [% nil])) params-splitted-by-and)
-          param-list (flatten params-as-tuples)]
+          param-list (mapcat #(let [index-of-= (.indexOf % "=")]
+                               (if (and
+                                     (> index-of-= 0)
+                                     ; Check if the first = char is the last char of the param.
+                                     (< (inc index-of-=) (.length %)))
+                                 (split % #"=")
+                                 [% nil])) params-splitted-by-ampersand)]
       (keywordize-keys (apply hash-map param-list)))))
 
 (defn- stub-response [{:keys [status headers body content-type]}]
@@ -60,8 +59,8 @@
       (.addHeader nano-response name value))
     nano-response))
 
-(defn- route->request-spec [stub-http-request {:keys [request-spec-fn]}]
-  (request-spec-fn stub-http-request))
+(defn- indices-of-route-matching-stub-request [stub-http-request routes]
+  (keep-indexed #(if (true? ((:request-spec-fn %2) stub-http-request)) %1 nil) routes))
 
 (defn- http-session->stub-http-request
   "Converts an instance of IHTTPSession to a \"stub-http\" representation of a request"
@@ -69,34 +68,52 @@
   (let [body-map (HashMap.)
         _ (.parseBody session body-map)
         ; Convert java hashmap into a clojure map
-        body-map (into {} body-map)]
-    {:method       (->> session .getMethod .toString)
-     :headers      (->> (.getHeaders session)
-                        (map-kv lower-case vec))
-     :content-type (last (get :headers "content-type"))
-     :request-line (.getParms session)
-     :path         (.getUri session)
-     :body         body-map
-     :query-params (params->map (.getQueryParameterString session))}))
+        body-map (into {} body-map)
+        path (.getUri session)
+        method (->> session .getMethod .toString)
+        headers (->> (.getHeaders session)
+                     (map-kv (comp keyword lower-case) identity))
+        req {:method       method
+             :headers      headers
+             :content-type (:content-type :headers)
+             :path         path
+             ; There's no way to get the protocol version now? File an issue!
+             :request-line (str method " " path " HTTP/1.1")
+             :body         (if (empty? body-map) nil body-map)
+             :query-params (params->map (.getQueryParameterString session))}
+        req-no-nils (into {} (filter (comp some? val) req))]
+    req-no-nils))
 
 (defn- new-nano-server! [port routes]
   "Create a nano server instance that will return the same response over and over on match"
   (proxy [NanoHTTPD] [port]
     (serve [^NanoHTTPD$IHTTPSession session]
-      (let [routes @routes
+      (let [current-routes @routes
             stub-http-request (http-session->stub-http-request session)
-            routes-matching-request (filter (partial route->request-spec stub-http-request) routes)
-            matching-route-count (count routes-matching-request)]
+            indicies-matching-request (indices-of-route-matching-stub-request stub-http-request current-routes)
+            matching-route-count (count indicies-matching-request)]
         (cond
-          (> matching-route-count 1) (throw (ex-info "Failed to determine response since several routes match" {:routes routes}))
           ; TODO Make this configurable by allowing to determine what should happen by supplying a :default response
-          (= matching-route-count 0) (throw (ex-info "Failed to determine response since no route matches" {:routes routes})))
-        (let [response-fn (:response-spec-fn (first routes-matching-request))
-              response-spec (response-fn stub-http-request)]
-          (stub-response response-spec))))))
+          (> matching-route-count 1) (throw (ex-info
+                                              (str "Failed to determine response since several routes matched request: " stub-http-request ". Routes are:")
+                                              {:routes current-routes}))
+          (= matching-route-count 0) (throw (ex-info
+                                              (str "Failed to determine response since no route matched request: " stub-http-request ". Routes are:")
+                                              {:routes current-routes})))
+        (let [index-matching (first indicies-matching-request)
+              response-fn (:response-spec-fn (get current-routes index-matching))
+              response-spec (response-fn stub-http-request)
+              response (stub-response response-spec)]
+          ; Record request
+          (swap! routes update-in [index-matching :recordings] (fn [invocations]
+                                                                 (conj invocations
+                                                                       {:request  stub-http-request
+                                                                        :response response})))
+          response)))))
 
 (defn- record-route! [route-state route-matcher-fn response-fn]
-  (swap! route-state conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn}))
+  (swap! route-state conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn
+                           :recordings      []}))
 
 (defn- request-spec-matches? [request-spec request]
   (letfn [(path-without-query-params [path]
@@ -117,7 +134,7 @@
          (query-param-matches? (:query-params request-spec) (:query-params request))
          (method-matches? (:method request-spec) (:method request)))))
 
-(defn- throw-normalize-exception! [type val]
+(defn- throw-normalization-exception! [type val]
   (let [class-name (-> val .getClass .getName)
         error-message (str "Internal error: Couldn't find " type " conversion strategy for class " (-> val .getClass .getName))]
     (throw (ex-info error-message {:class class-name :value val}))))
@@ -127,14 +144,14 @@
 (defmethod normalize-request-spec IPersistentMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
 (defmethod normalize-request-spec PersistentArrayMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
 (defmethod normalize-request-spec String [path] (normalize-request-spec {:path path}))
-(defmethod normalize-request-spec :default [value] (throw-normalize-exception! "request" value))
+(defmethod normalize-request-spec :default [value] (throw-normalization-exception! "request" value))
 
 (defmulti normalize-response-spec class)
 (defmethod normalize-response-spec IFn [resp-fn] resp-fn)
 (defmethod normalize-response-spec IPersistentMap [resp-map] (fn [_] resp-map))
 (defmethod normalize-response-spec PersistentArrayMap [resp-map] (fn [_] resp-map))
 (defmethod normalize-response-spec String [body] (fn [_] {:status 200 :content-type "text/plain" :headers {:content-type "text/plain"} :body body}))
-(defmethod normalize-response-spec :default [value] (throw-normalize-exception! "response" value))
+(defmethod normalize-response-spec :default [value] (throw-normalization-exception! "response" value))
 
 (defn- get-free-port! []
   (let [socket (ServerSocket. 0)
@@ -142,10 +159,19 @@
     (.close socket)
     port))
 
+(defprotocol Response
+  (recorded-requests [this] "Return all recorded requests")
+  (recorded-responses [this] "Return all recorded responses"))
+
 (defrecord NanoFakeServer [nano-server routes]
   Closeable
   (close [_]
-    (.stop nano-server)))
+    (.stop nano-server))
+  Response
+  (recorded-requests [_]
+    (mapcat #(map :request (:recordings %)) @routes))
+  (recorded-responses [_]
+    (mapcat #(map :response (:recordings %)) @routes)))
 
 (defn start!
   "Start a new fake web server on a random free port. Usage example:
