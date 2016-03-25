@@ -3,12 +3,10 @@
            (java.net ServerSocket)
            (java.io Closeable)
            (fi.iki.elonen NanoHTTPD))
-  (:require [clojure.string :refer [split blank? lower-case]]
-            [clojure.test :refer [function?]]
+  (:require [clojure.test :refer [function?]]
             [stub-http.internal.port :refer [get-free-port!]]
             [stub-http.internal.nano :as nano]
-            [stub-http.internal.spec :refer [normalize-request-spec normalize-response-spec]]
-            [stub-http.internal.support :refer [substring-before]]))
+            [stub-http.internal.spec :refer [normalize-request-spec normalize-response-spec]]))
 
 (defn- record-route! [route-state route-matcher response-spec]
   (swap! route-state conj {:request-spec-fn  (normalize-request-spec route-matcher) :request-spec route-matcher
