@@ -18,7 +18,7 @@
       (is (starts-with? (->> req2 :headers :accept) "text/html"))
       (is (false? (contains? req1 :query-params)))
       (is (false? (contains? req1 :body)))
-      (is (= "GET /something HTTP/1.1"(:request-line req2))))))
+      (is (= "GET /something HTTP/1.1" (:request-line req2))))))
 
 (deftest RecordedResponsesTest
   (with-routes!
@@ -28,4 +28,9 @@
     (client/get (str uri "/something"))
     (let [responses (recorded-responses server)
           [resp1 resp2] responses]
-      (is (= 2 (count responses))))))
+      (is (= 200 (:status resp1)))
+      (is (= 200 (:status resp2)))
+      (is (= "application/json" (:content-type resp1)))
+      (is (= "application/json" (:content-type resp2)))
+      (is (= "{\"hello\":\"world\"}" (:body resp1)))
+      (is (= "{\"hello\":\"world\"}" (:body resp2))))))

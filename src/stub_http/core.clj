@@ -39,7 +39,7 @@
                                  [% nil])) params-splitted-by-ampersand)]
       (keywordize-keys (apply hash-map param-list)))))
 
-(defn- stub-response [{:keys [status headers body content-type]}]
+(defn- create-nano-response [{:keys [status headers body content-type]}]
   "Create a nano-httpd Response from the given map.
 
    path - The request path to mock, for example /search
@@ -89,27 +89,27 @@
   (proxy [NanoHTTPD] [port]
     (serve [^NanoHTTPD$IHTTPSession session]
       (let [current-routes @routes
-            stub-http-request (http-session->stub-http-request session)
-            indicies-matching-request (indices-of-route-matching-stub-request stub-http-request current-routes)
+            stub-request (http-session->stub-http-request session)
+            indicies-matching-request (indices-of-route-matching-stub-request stub-request current-routes)
             matching-route-count (count indicies-matching-request)]
         (cond
           ; TODO Make this configurable by allowing to determine what should happen by supplying a :default response
           (> matching-route-count 1) (throw (ex-info
-                                              (str "Failed to determine response since several routes matched request: " stub-http-request ". Routes are:")
+                                              (str "Failed to determine response since several routes matched request: " stub-request ". Routes are:")
                                               {:routes current-routes}))
           (= matching-route-count 0) (throw (ex-info
-                                              (str "Failed to determine response since no route matched request: " stub-http-request ". Routes are:")
+                                              (str "Failed to determine response since no route matched request: " stub-request ". Routes are:")
                                               {:routes current-routes})))
         (let [index-matching (first indicies-matching-request)
               response-fn (:response-spec-fn (get current-routes index-matching))
-              response-spec (response-fn stub-http-request)
-              response (stub-response response-spec)]
+              stub-response (response-fn stub-request)
+              nano-response (create-nano-response stub-response)]
           ; Record request
           (swap! routes update-in [index-matching :recordings] (fn [invocations]
                                                                  (conj invocations
-                                                                       {:request  stub-http-request
-                                                                        :response response})))
-          response)))))
+                                                                       {:request  stub-request
+                                                                        :response stub-response})))
+          nano-response)))))
 
 (defn- record-route! [route-state route-matcher-fn response-fn]
   (swap! route-state conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn
