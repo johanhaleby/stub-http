@@ -1,4 +1,4 @@
-(ns stub-http.macro-test
+(ns stub-http.method-test
   (:require [clojure.test :refer :all]
             [stub-http.core :refer :all]
             [cheshire.core :as json]

@@ -94,12 +94,14 @@
             matching-route-count (count indicies-matching-request)]
         (cond
           ; TODO Make this configurable by allowing to determine what should happen by supplying a :default response
-          (> matching-route-count 1) (throw (ex-info
-                                              (str "Failed to determine response since several routes matched request: " stub-request ". Routes are:")
-                                              {:routes current-routes}))
-          (= matching-route-count 0) (throw (ex-info
-                                              (str "Failed to determine response since no route matched request: " stub-request ". Routes are:")
-                                              {:routes current-routes})))
+          (> matching-route-count 1)
+          (throw (ex-info
+                   (str "Failed to determine response since several routes matched request: " stub-request ". Matching response specs are:\n")
+                   {:matching-specs (map #(select-keys % [:request-spec :response-spec]) ; Select only the request spec and response spec
+                                         ; Get the routes for the matching indicies
+                                         (mapv current-routes indicies-matching-request))}))
+          (= matching-route-count 0) (throw (ex-info (str "Failed to determine response since no route matched request: " stub-request ". Routes are:\n")
+                                                     {:routes current-routes})))
         (let [index-matching (first indicies-matching-request)
               response-fn (:response-spec-fn (get current-routes index-matching))
               stub-response (response-fn stub-request)
@@ -111,9 +113,6 @@
                                                                         :response stub-response})))
           nano-response)))))
 
-(defn- record-route! [route-state route-matcher-fn response-fn]
-  (swap! route-state conj {:request-spec-fn route-matcher-fn :response-spec-fn response-fn
-                           :recordings      []}))
 
 (defn- request-spec-matches? [request-spec request]
   (letfn [(path-without-query-params [path]
@@ -152,6 +151,11 @@
 (defmethod normalize-response-spec PersistentArrayMap [resp-map] (fn [_] resp-map))
 (defmethod normalize-response-spec String [body] (fn [_] {:status 200 :content-type "text/plain" :headers {:content-type "text/plain"} :body body}))
 (defmethod normalize-response-spec :default [value] (throw-normalization-exception! "response" value))
+
+(defn- record-route! [route-state route-matcher response-spec]
+  (swap! route-state conj {:request-spec-fn  (normalize-request-spec route-matcher) :request-spec route-matcher
+                           :response-spec-fn (normalize-response-spec response-spec) :response-spec response-spec
+                           :recordings       []}))
 
 (defn- get-free-port! []
   (let [socket (ServerSocket. 0)
@@ -193,9 +197,8 @@
          routes-map (if (map? routes)
                       routes
                       (routes server))
-         _ (assert (map? routes-map))
-         normalized-routes (map-kv normalize-request-spec normalize-response-spec routes-map)]
-     (doseq [[req-spec resp-spec] normalized-routes]
+         _ (assert (map? routes-map))]
+     (doseq [[req-spec resp-spec] routes-map]
        (record-route! route-state req-spec resp-spec))
      server)))
 
