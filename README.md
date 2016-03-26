@@ -19,6 +19,9 @@ The latest release version of stub-http is hosted on [Clojars](https://clojars.o
 ## Usage
 
 ```clojure
+(ns x.y
+  (:require [stub-http.core :refer :all]))
+
 (with-routes! 
 	{"something" {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"})}
 	 {:path "/y" :query-params {:q "something")}} {:status 200 :content-type "application/json" :body  (json/generate-string {:hello "brave new world"})}}
