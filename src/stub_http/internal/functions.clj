@@ -1,4 +1,4 @@
-(ns stub-http.internal.support)
+(ns stub-http.internal.functions)
 
 (defn map-kv [fk fv m]
   "Maps the keys and values in a map with the supplied functions.

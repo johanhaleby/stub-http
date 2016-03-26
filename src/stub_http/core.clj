@@ -1,14 +1,12 @@
 (ns stub-http.core
-  (:import (clojure.lang IFn IPersistentMap PersistentArrayMap)
-           (java.net ServerSocket)
-           (java.io Closeable)
+  (:import (java.io Closeable)
            (fi.iki.elonen NanoHTTPD))
   (:require [clojure.test :refer [function?]]
             [stub-http.internal.port :refer [get-free-port!]]
-            [stub-http.internal.nano :as nano]
+            [stub-http.internal.server :as nano]
             [stub-http.internal.spec :refer [normalize-request-spec normalize-response-spec]]))
 
-(defn- record-route! [route-state route-matcher response-spec]
+(defn- add-route [route-state route-matcher response-spec]
   (swap! route-state conj {:request-spec-fn  (normalize-request-spec route-matcher) :request-spec route-matcher
                            :response-spec-fn (normalize-response-spec response-spec) :response-spec response-spec
                            :recordings       []}))
@@ -49,7 +47,7 @@
                       (routes server))
          _ (assert (map? routes-map))]
      (doseq [[req-spec resp-spec] routes-map]
-       (record-route! route-state req-spec resp-spec))
+       (add-route route-state req-spec resp-spec))
      server)))
 
 (defmacro with-routes!

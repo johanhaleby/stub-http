@@ -1,5 +1,5 @@
 (ns stub-http.internal.spec
-  (:require [stub-http.internal.support :refer [substring-before]])
+  (:require [stub-http.internal.functions :refer [substring-before]])
   (:import (clojure.lang PersistentArrayMap IPersistentMap IFn)))
 
 (defn- request-spec-matches? [request-spec request]
