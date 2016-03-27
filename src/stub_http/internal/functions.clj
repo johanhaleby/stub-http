@@ -19,3 +19,5 @@
       str
       (.substring str 0 index-of-before))))
 
+(def not-nil? (complement nil?))
+

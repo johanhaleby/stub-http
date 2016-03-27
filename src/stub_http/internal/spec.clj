@@ -1,6 +1,6 @@
 (ns stub-http.internal.spec
   (:require [stub-http.internal.functions :refer [substring-before]])
-  (:import (clojure.lang PersistentArrayMap IPersistentMap IFn)))
+  (:import (clojure.lang PersistentArrayMap IPersistentMap IFn Keyword)))
 
 (defn- request-spec-matches? [request-spec request]
   (letfn [(path-without-query-params [path]
@@ -31,6 +31,9 @@
 (defmethod normalize-request-spec IPersistentMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
 (defmethod normalize-request-spec PersistentArrayMap [req-spec] (fn [request] (request-spec-matches? req-spec request)))
 (defmethod normalize-request-spec String [path] (normalize-request-spec {:path path}))
+(defmethod normalize-request-spec Keyword [key] (if (= :default key) ; Allow for default route
+                                                  (constantly false) ; Default match should never match, it's handled explicitly
+                                                  (throw (IllegalArgumentException. "Only :default is a valid keyword for the request specification"))))
 (defmethod normalize-request-spec :default [value] (throw-normalization-exception! "request" value))
 
 (defmulti normalize-response-spec class)
