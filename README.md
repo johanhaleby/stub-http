@@ -30,7 +30,8 @@ The latest release version of stub-http is hosted on [Clojars](https://clojars.o
 
 ## Documentation
 
-See [wiki](https://github.com/johanhaleby/stub-http/wiki).
+1. See [wiki](https://github.com/johanhaleby/stub-http/wiki).
+1. An introduction can also be found in [this](http://code.haleby.se/2016/03/28/stubbing-http-services-in-clojure/) blog post.
 
 ## Full Examples
 
