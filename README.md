@@ -8,7 +8,6 @@ stubbing HTTP endpoints so I sat out to write one myself based on [nanohttpd](ht
 if you want to test your app against a real HTTP server with actual HTTP requests. And even if you don't _want_ to this it may be your only
 option if you're (for example) is using a Java library that makes HTTP requests and you want to stub/fake its responses.
 
-More docs and implementation is coming soon.
 
 ## Latest version
 
@@ -112,7 +111,7 @@ This means that you can use it with the [with-open](https://clojuredocs.org/cloj
 
 ## Project Status
 
-The project is in an early phase and changes are expected
+The project is in an early phase and some changes are to be expected.
 
 [![Project Stats](https://www.openhub.net/p/stub-http/widgets/project_thin_badge.gif)](https://www.openhub.net/p/stub-http)
 
