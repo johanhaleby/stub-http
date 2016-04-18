@@ -92,7 +92,7 @@ This example matches only a GET request with a query param "name" equal "value" 
 
 ### Example 3 - Using start! and with-open
 
-The `start!` function return a Clojure record that implements [Closable](https://docs.oracle.com/javase/8/docs/api/java/io/Closeable.html). 
+The `start!` function return a Clojure record that implements [Closeable](https://docs.oracle.com/javase/8/docs/api/java/io/Closeable.html). 
 This means that you can use it with the [with-open](https://clojuredocs.org/clojure.core/with-open) macro:
   
 ```clojure
