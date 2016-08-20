@@ -6,7 +6,7 @@ There are several client specific "http mocking/stubbing/faking" libraries out t
 [ring-mock](https://github.com/ring-clojure/ring-mock) but they work on the level of the library and not the HTTP level. I couldn't find a client agnostic library for 
 stubbing HTTP endpoints so I sat out to write one myself based on [nanohttpd](https://github.com/NanoHttpd/nanohttpd). This is useful
 if you want to test your app against a real HTTP server with actual HTTP requests. And even if you don't _want_ to this it may be your only
-option if you're (for example) is using a Java library that makes HTTP requests and you want to stub/fake its responses.
+option if you're (for example) using a Java library that makes HTTP requests and you want to stub/fake its responses.
 
 
 ## Latest version
