@@ -9,28 +9,31 @@
 
 (def ^:private initial-route-state [])
 
-(defn- add-route
-  [route-state request-spec response-spec]
-  {:pre [(not-nil? route-state) (not-nil? request-spec) (not-nil? response-spec)]}
-  (swap! route-state conj {:request-spec-fn  (normalize-request-spec request-spec) :request-spec request-spec
-                           :response-spec-fn (normalize-response-spec response-spec) :response-spec response-spec
-                           :recordings       []}))
+(defn- specs->route
+  "Takes a request and response specification and returns a route"
+  [request-spec response-spec]
+  {:pre [(not-nil? request-spec) (not-nil? response-spec)]}
+  {:request-spec-fn  (normalize-request-spec request-spec) :request-spec request-spec
+   :response-spec-fn (normalize-response-spec response-spec) :response-spec response-spec
+   :recordings       []})
 
-(defn- apply-routes
+(defn- replace-routes
   "Applies routes by overwriting the existing ones"
-  [route-state server routes]
-  {:pre [(or (map? routes) (function? routes))]}
-  (let [routes-map (if (map? routes)
-                     routes
-                     (routes server))]
+  [route-state server route-specs]
+  {:pre [(or (map? route-specs) (function? route-specs))]}
+  (let [routes-map (if (map? route-specs)
+                     route-specs
+                     (route-specs server))]
     (assert (map? routes-map))
-    (reset! route-state initial-route-state)
-    (doseq [[req-spec resp-spec] routes-map]
-      (add-route route-state req-spec resp-spec))))
+    (let [add-route (fn [routes [req-spec resp-spec]]
+                      (conj! routes (specs->route req-spec resp-spec)))
+          transient-routes (reduce add-route (transient []) routes-map)
+          persistent-routes (persistent! transient-routes)]
+      (reset! route-state persistent-routes))))
 
 (defprotocol RouteModifier
   (add-route! [this request-spec response-spec] "Add a new route by supplied a request and response specification")
-  (routes! [this routes] "Override existing routes with the supplied route map or route function"))
+  (routes! [this routes] "Overwrite existing routes with the supplied route map or route function"))
 
 (defprotocol Response
   (recorded-requests [this] "Return all recorded requests")
@@ -42,9 +45,9 @@
     (.stop nano-server))
   RouteModifier
   (add-route! [_ req-spec resp-spec]
-    (add-route routes req-spec resp-spec))
+    (swap! routes conj (specs->route req-spec resp-spec)))
   (routes! [_ r]
-    (apply-routes routes nano-server r))
+    (replace-routes routes nano-server r))
   Response
   (recorded-requests [_]
     (mapcat #(map :request (:recordings %)) @routes))
@@ -69,12 +72,12 @@
          _ (.start nano-server)
          uri (str "http://localhost:" (.getListeningPort nano-server))
          server (map->NanoFakeServer {:uri uri :port port :nano-server nano-server :routes route-state})]
-     (apply-routes route-state server routes)
+     (replace-routes route-state server routes)
      server)))
 
 (defmacro with-routes!
-  "Applies routes and creates and stops a fake server implicitly"
-  {:arglists '([bindings? routes & body])}
+  "Applies route-specs and creates and stops a fake server implicitly"
+  {:arglists '([bindings? route-specs & body])}
   [bindings-or-routes & more-args]
   (let [[bindings routes body] (if (vector? bindings-or-routes)
                                  [bindings-or-routes (first more-args) (rest more-args)]
