@@ -10,4 +10,5 @@
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.8.0"]
                                   [cheshire "5.5.0"]
                                   [clj-http-lite "0.3.0"]]}}
+  :repositories [["releases" {:url "http://clojars.org/repo" :creds :gpg}]]
   :plugins [[lein-codox "0.9.4"]])
