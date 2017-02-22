@@ -118,7 +118,7 @@ The project is in an early phase and some changes are to be expected.
 
 ## License
 
-Copyright (c) 2016 Johan Haleby
+Copyright (c) 2017 Johan Haleby
 
 Released under [the MIT License](http://www.opensource.org/licenses/mit-license.php).
 
