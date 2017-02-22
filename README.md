@@ -1,6 +1,6 @@
 # ![Logo](https://raw.githubusercontent.com/johanhaleby/stub-http/master/logo.png "Stub HTTP") [![Build Status](https://img.shields.io/travis/johanhaleby/stub-http.svg?style=flat)](https://travis-ci.org/johanhaleby/stub-http) [![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit) 
 
-A Clojure library designed to stub HTTP responses regardless of which library used to actually make the HTTP requests.
+A Clojure library designed to stub HTTP responses regardless of which client library used to actually make the HTTP requests.
   
 There are several client specific "http mocking/stubbing/faking" libraries out there such as [clj-http-fake](https://github.com/myfreeweb/clj-http-fake) and 
 [ring-mock](https://github.com/ring-clojure/ring-mock) but they work on the level of the library and not the HTTP level. I couldn't find a client agnostic library for 
