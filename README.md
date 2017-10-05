@@ -22,7 +22,7 @@ The latest release version of stub-http is hosted on [Clojars](https://clojars.o
   (:require [stub-http.core :refer :all]))
 
 (with-routes! 
-	{"/something" {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"})}
+	{"/something" {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world"}) :delay 1000}
 	 {:path "/y" :query-params {:q "something"}} {:status 200 :content-type "application/json" :body  (json/generate-string {:hello "brave new world"})}}
 	 ; Do actual HTTP request
 	 )

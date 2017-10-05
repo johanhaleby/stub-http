@@ -20,13 +20,14 @@
 (defn- indices-of-routes-matching-request [stub-http-request routes]
   (keep-indexed #(if (true? ((:request-spec-fn %2) stub-http-request)) %1 nil) routes))
 
-(defn- create-response [{:keys [status headers body content-type]}]
+(defn- create-response [{:keys [status headers body content-type delay]}]
   "Create a nano-httpd Response from the given map.
 
    path - The request path to mock, for example /search
    status - The status code
    headers - The response headers (list or vector of tuples specifying headers). For example ([\"Content-Type\" \"application/json\"], ...)
-   body - The response body"
+   body - The response body
+   delay - Delay in ms added to the response"
   (let [; We see if a predefined status exists for the supplied status code
         istatus (first (filter #(= (.getRequestStatus %) status) (NanoHTTPD$Response$Status/values)))
         ; If no match then we create a custom implementation of IStatus with the supplied status
@@ -34,8 +35,8 @@
                               (getDescription [_] "")
                               (getRequestStatus [_]
                                 status)))
-
         nano-response (NanoHTTPD/newFixedLengthResponse istatus content-type body)]
+    (if delay (Thread/sleep delay))
     (for [[name value] headers]
       (.addHeader nano-response name value))
     nano-response))
