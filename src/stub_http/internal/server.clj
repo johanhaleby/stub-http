@@ -29,13 +29,13 @@
    body - The response body
    delay - Delay in ms added to the response"
   (let [; We see if a predefined status exists for the supplied status code
-        istatus (first (filter #(= (.getRequestStatus %) status) (NanoHTTPD$Response$Status/values)))
+        status (first (filter #(= (.getRequestStatus %) status) (NanoHTTPD$Response$Status/values)))
         ; If no match then we create a custom implementation of IStatus with the supplied status
-        istatus (or istatus (reify NanoHTTPD$Response$IStatus
+        sstatus (or status (reify NanoHTTPD$Response$IStatus
                               (getDescription [_] "")
                               (getRequestStatus [_]
                                 status)))
-        nano-response (NanoHTTPD/newFixedLengthResponse istatus content-type body)]
+        nano-response (NanoHTTPD/newFixedLengthResponse sstatus content-type body)]
     (if delay (Thread/sleep delay))
     (for [[name value] headers]
       (.addHeader nano-response name value))
