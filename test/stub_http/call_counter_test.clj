@@ -12,4 +12,5 @@
         [body (json/generate-string {:hello "world"})]
         {"/something" {:status 200 :content-type "application/json"
                        :body   body :counter counter}}
-        (is (= @counter 1 ))))))
+        (client/get (str uri "/something")))
+        (is (= @counter 1 )))))
