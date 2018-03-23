@@ -25,7 +25,7 @@
 (defn- indices-of-routes-matching-request [stub-http-request routes]
   (keep-indexed #(if (true? ((:request-spec-fn %2) stub-http-request)) %1 nil) routes))
 
-(defn- create-response [{:keys [status headers body content-type delay]}]
+(defn- create-response [{:keys [status headers body content-type delay counter]}]
   "Create a nano-httpd Response from the given map.
 
    path - The request path to mock, for example /search
@@ -42,6 +42,7 @@
                               status)))
         nano-response (NanoHTTPD/newFixedLengthResponse status content-type body)]
     (if delay (Thread/sleep delay))
+    (if counter (swap! counter inc))
     (doseq [[name value] headers]
       (.addHeader nano-response (to-str name) (to-str value)))
     nano-response))
