@@ -1,4 +1,4 @@
-(defproject se.haleby/stub-http "0.2.1-SNAPSHOT"
+(defproject se.haleby/stub-http "0.2.5-SNAPSHOT"
   :description "A client library agonistic way to stub HTTP responses"
   :url "https://github.com/johanhaleby/stub-http"
   :license {:name         "MIT License"
@@ -6,7 +6,7 @@
             :distribution :repo}
   :lein-release {:deploy-via :clojars}
   :min-lein-version "2.0.0"
-  :dependencies [[org.nanohttpd/nanohttpd "2.3.0"]]
+  :dependencies [[org.nanohttpd/nanohttpd "2.3.1"]]
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.8.0"]
                                   [cheshire "5.5.0"]
                                   [clj-http-lite "0.3.0"]]}}

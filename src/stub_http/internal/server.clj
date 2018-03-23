@@ -9,13 +9,18 @@
     (let [params-splitted-by-ampersand (split param-string #"&")
           ; Handle no-value parameters. If a no-value parameter is found then use nil as parameter value
           param-list (mapcat #(let [index-of-= (.indexOf % "=")]
-                               (if (and
-                                     (> index-of-= 0)
-                                     ; Check if the first = char is the last char of the param.
-                                     (< (inc index-of-=) (.length %)))
-                                 (split % #"=")
-                                 [% nil])) params-splitted-by-ampersand)]
+                                (if (and
+                                      (> index-of-= 0)
+                                      ; Check if the first = char is the last char of the param.
+                                      (< (inc index-of-=) (.length %)))
+                                  (split % #"=")
+                                  [% nil])) params-splitted-by-ampersand)]
       (keywordize-keys (apply hash-map param-list)))))
+
+(defn- to-str [o]
+  (str (if (keyword? o)
+         (name o)
+         o)))
 
 (defn- indices-of-routes-matching-request [stub-http-request routes]
   (keep-indexed #(if (true? ((:request-spec-fn %2) stub-http-request)) %1 nil) routes))
@@ -29,17 +34,17 @@
    body - The response body
    delay - Delay in ms added to the response"
   (let [; We see if a predefined status exists for the supplied status code
-        istatus (first (filter #(= (.getRequestStatus %) status) (NanoHTTPD$Response$Status/values)))
+        status (first (filter #(= (.getRequestStatus %) status) (NanoHTTPD$Response$Status/values)))
         ; If no match then we create a custom implementation of IStatus with the supplied status
-        istatus (or istatus (reify NanoHTTPD$Response$IStatus
-                              (getDescription [_] "")
-                              (getRequestStatus [_]
-                                status)))
-        nano-response (NanoHTTPD/newFixedLengthResponse istatus content-type body)]
+        status (or status (reify NanoHTTPD$Response$IStatus
+                            (getDescription [_] "")
+                            (getRequestStatus [_]
+                              status)))
+        nano-response (NanoHTTPD/newFixedLengthResponse status content-type body)]
     (if delay (Thread/sleep delay))
     (if counter (swap! counter inc))
-    (for [[name value] headers]
-      (.addHeader nano-response name value))
+    (doseq [[name value] headers]
+      (.addHeader nano-response (to-str name) (to-str value)))
     nano-response))
 
 (defn- session->stub-request
