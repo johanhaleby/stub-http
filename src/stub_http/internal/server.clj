@@ -29,9 +29,9 @@
    body - The response body
    delay - Delay in ms added to the response"
   (let [; We see if a predefined status exists for the supplied status code
-        status (first (filter #(= (.getRequestStatus %) status) (NanoHTTPD$Response$Status/values)))
         ; If no match then we create a custom implementation of IStatus with the supplied status
-        status (or status (reify NanoHTTPD$Response$IStatus
+        status (or (NanoHTTPD$Response$Status/lookup status)
+                   (reify NanoHTTPD$Response$IStatus
                             (getDescription [_] "")
                             (getRequestStatus [_]
                               status)))
