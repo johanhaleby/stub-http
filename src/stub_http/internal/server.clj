@@ -1,6 +1,6 @@
 (ns stub-http.internal.server
   (:require [clojure.string :refer [split blank? lower-case]]
-            [stub-http.internal.functions :refer [map-kv keywordize-keys substring-before not-nil?]])
+            [stub-http.internal.functions :refer [map-kv not-nil?]])
   (:import (fi.iki.elonen NanoHTTPD NanoHTTPD$Response$IStatus NanoHTTPD$Response$Status NanoHTTPD$IHTTPSession)
            (java.util HashMap)))
 
