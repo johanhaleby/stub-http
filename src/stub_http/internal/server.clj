@@ -1,21 +1,16 @@
 (ns stub-http.internal.server
   (:require [clojure.string :refer [split blank? lower-case]]
-            [stub-http.internal.functions :refer [map-kv keywordize-keys substring-before not-nil?]])
+            [stub-http.internal.functions :refer [map-kv not-nil?]])
   (:import (fi.iki.elonen NanoHTTPD NanoHTTPD$Response$IStatus NanoHTTPD$Response$Status NanoHTTPD$IHTTPSession)
            (java.util HashMap)))
 
 (defn- params->map [param-string]
-  (if-not (blank? param-string)
-    (let [params-splitted-by-ampersand (split param-string #"&")
-          ; Handle no-value parameters. If a no-value parameter is found then use nil as parameter value
-          param-list (mapcat #(let [index-of-= (.indexOf % "=")]
-                                (if (and
-                                      (> index-of-= 0)
-                                      ; Check if the first = char is the last char of the param.
-                                      (< (inc index-of-=) (.length %)))
-                                  (split % #"=")
-                                  [% nil])) params-splitted-by-ampersand)]
-      (keywordize-keys (apply hash-map param-list)))))
+  (when-not (blank? param-string)
+    (->> (split param-string #"&")
+         (map #(split % #"=" 2))
+         (map (fn [[k v]]
+                [(keyword k) (when-not (blank? v) v)]))
+         (into {}))))
 
 (defn- to-str [o]
   (str (if (keyword? o)
