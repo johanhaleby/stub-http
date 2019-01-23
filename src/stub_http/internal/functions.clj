@@ -6,7 +6,7 @@
   fv = the function for the values"
   (into {} (for [[k v] m] [(fk k) (fv v)])))
 
-(defn substring-before [str before]
+(defn substring-before [^String str ^String before]
   "Return the substring of string <str> before string <before>. If no match then <str> is returned."
   (let [index-of-before (.indexOf str before)]
     (if (= -1 index-of-before)

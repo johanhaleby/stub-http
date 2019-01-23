@@ -1,5 +1,6 @@
 (ns stub-http.internal.spec
-  (:require [stub-http.internal.functions :refer [substring-before]])
+  (:require [clojure.string :refer (lower-case)]
+            [stub-http.internal.functions :refer [substring-before]])
   (:import (clojure.lang PersistentArrayMap IPersistentMap IFn Keyword)))
 
 (defn- request-spec-matches? [request-spec request]
@@ -7,7 +8,7 @@
             (substring-before path "?"))
           (method-matches? [expected-method actual-method]
             (let [; Make keyword out of string and never mind "case" of keyword (i.e. :GET and :get are treated the same)
-                  normalize #(->> (if (string? %) % (name %)) .toLowerCase keyword)
+                  normalize (comp keyword lower-case name)
                   expected-normalized (normalize (or expected-method actual-method)) ; Assume same as actual if not present
                   actual-normalized (normalize actual-method)]
               (= expected-normalized actual-normalized)))
@@ -21,7 +22,7 @@
          (query-param-matches? (:query-params request-spec) (:query-params request))
          (method-matches? (:method request-spec) (:method request)))))
 
-(defn- throw-normalization-exception! [type val]
+(defn- throw-normalization-exception! [type ^Object val]
   (let [class-name (-> val .getClass .getName)
         error-message (str "Internal error: Couldn't find " type " conversion strategy for class " (-> val .getClass .getName))]
     (throw (ex-info error-message {:class class-name :value val}))))

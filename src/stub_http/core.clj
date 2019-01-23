@@ -39,7 +39,7 @@
   (recorded-requests [this] "Return all recorded requests")
   (recorded-responses [this] "Return all recorded responses"))
 
-(defrecord NanoFakeServer [nano-server routes]
+(defrecord NanoFakeServer [^NanoHTTPD nano-server routes]
   Closeable
   (close [_]
     (.stop nano-server))
