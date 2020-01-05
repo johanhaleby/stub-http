@@ -123,3 +123,5 @@ Copyright (c) 2019 Johan Haleby
 Released under [the MIT License](http://www.opensource.org/licenses/mit-license.php).
 
 ## [Contributors](https://github.com/johanhaleby/stub-http/contributors)
+
+<a href="https://www.buymeacoffee.com/johanhaleby" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/arial-blue.png" alt="Buy Me A Coffee" style="height: 42px !important;width: 180px !important;" height="42px" width="180px"></a>
