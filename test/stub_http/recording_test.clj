@@ -32,8 +32,7 @@
 
       (is (= "PUT /something HTTP/1.1" (:request-line req3)))
       (is (starts-with? (->> req3 :headers :accept) "application/json"))
-      ;; TODO: "content" is the name of an already deleted tmp file
-      (is (string? (get-in req3 [:body "content"]))))))
+      (is (= "some PUT data" (get-in req3 [:body "content"]))))))
 
 (deftest RecordedResponsesTest
   (with-routes!

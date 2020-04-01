@@ -45,12 +45,16 @@
 (defn- session->stub-request
   "Converts an instance of IHTTPSession to a \"stub-http\" representation of a request"
   [^NanoHTTPD$IHTTPSession session]
-  (let [body-map (HashMap.)
+  (let [method (->> session .getMethod .toString)
+        body-map (HashMap.)
         _ (.parseBody session body-map)
         ; Convert java hashmap into a clojure map
         body-map (into {} body-map)
+        ; NanoHTTPD puts the PUT body into a tmp file that gets deleted after the request is handled
+        body-map (if (= "PUT" method)
+                   (update body-map "content" slurp)
+                   body-map)
         path (.getUri session)
-        method (->> session .getMethod .toString)
         headers (->> (.getHeaders session)
                      (map-kv (comp keyword lower-case) identity))
         req {:method       method
