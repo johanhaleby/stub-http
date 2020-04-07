@@ -9,6 +9,7 @@ read -p "Enter the version to release: " releaseVersion
 read -p "Enter the next build version (without snapshot): " nextVersion
 echo "Starting to release stub-http $releaseVersion" && \
 git pull --rebase && \
+lein clean && \
 lein test && \
 echo "Changing Build version to $releaseVersion" && \
 sed -i "" "s/se\.haleby\/stub-http \"${currentVersion}-SNAPSHOT\"/se\.haleby\/stub-http \"${releaseVersion}\"/g" project.clj && \
