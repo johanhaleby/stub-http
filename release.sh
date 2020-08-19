@@ -16,7 +16,7 @@ sed -i "" "s/se\.haleby\/stub-http \"${currentVersion}-SNAPSHOT\"/se\.haleby\/st
 echo "Pushing changes to git" && \
 git ci -am "Preparing for release ${releaseVersion}" && \
 git push && \
-git ci -am "Deploying ${releaseVersion} to clojars" && \
+echo "Deploying ${releaseVersion} to clojars" && \
 lein deploy clojars && \
 echo "Will create and push git tags.." && \
 git tag -a "${releaseVersion}" -m "Released ${releaseVersion}" && \
