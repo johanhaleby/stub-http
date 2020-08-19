@@ -7,7 +7,7 @@ set -e
 read -p "Enter the current build version (without snapshot): " currentVersion
 read -p "Enter the version to release: " releaseVersion
 read -p "Enter the next build version (without snapshot): " nextVersion
-echo "Starting to release stub-http $releaseVersion" && \
+echo "Starting to release stub-http $releaseVersion, enter sonatype password if prompted." && \
 git pull --rebase && \
 lein clean && \
 lein test && \
@@ -16,7 +16,7 @@ sed -i "" "s/se\.haleby\/stub-http \"${currentVersion}-SNAPSHOT\"/se\.haleby\/st
 echo "Pushing changes to git" && \
 git ci -am "Preparing for release ${releaseVersion}" && \
 git push && \
-echo "Deploying ${releaseVersion} to clojars" && \
+echo "Deploying ${releaseVersion} to clojars, enter private key password if promted." && \
 lein deploy clojars && \
 echo "Will create and push git tags.." && \
 git tag -a "${releaseVersion}" -m "Released ${releaseVersion}" && \
