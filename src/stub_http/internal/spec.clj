@@ -17,10 +17,14 @@
           (query-param-matches? [expected-params actual-params]
             (let [expected-params (or expected-params {})   ; Assume empty map if nil
                   query-params-to-match (select-keys actual-params (keys expected-params))]
-              (= expected-params query-params-to-match)))]
+              (= expected-params query-params-to-match)))
+          (body-matches? [expected-body actual-body]
+            (let [expected-body (or expected-body actual-body)]   ; Assume match if empty
+              (= expected-body actual-body)))]
     (and (apply path-matches? (map (comp path-without-query-params :path) [request-spec request]))
          (query-param-matches? (:query-params request-spec) (:query-params request))
-         (method-matches? (:method request-spec) (:method request)))))
+         (method-matches? (:method request-spec) (:method request))
+         (body-matches? (:body request-spec) (get-in request [:body "postData"])))))
 
 (defn- throw-normalization-exception! [type ^Object val]
   (let [class-name (-> val .getClass .getName)
