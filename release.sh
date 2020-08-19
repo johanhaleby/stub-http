@@ -16,13 +16,13 @@ sed -i "" "s/se\.haleby\/stub-http \"${currentVersion}-SNAPSHOT\"/se\.haleby\/st
 echo "Pushing changes to git" && \
 git ci -am "Preparing for release ${releaseVersion}" && \
 git push && \
-echo "Deploying ${releaseVersion} to clojars, enter private key password if promted." && \
+echo "Deploying ${releaseVersion} to clojars,  enter sonatype password if prompted." && \
 lein deploy clojars && \
 echo "Will create and push git tags.." && \
 git tag -a "${releaseVersion}" -m "Released ${releaseVersion}" && \
 git push --tags && \
 echo "Updating version to ${nextVersion}" && \
-sed -i "" "s/se\.haleby\/stub-http \"${releaseVersion}-SNAPSHOT\"/se\.haleby\/stub-http \"${nextVersion}\"/g" project.clj && \
+sed -i "" "s/se\.haleby\/stub-http \"${releaseVersion}\"/se\.haleby\/stub-http \"${nextVersion}-SNAPSHOT\"/g" project.clj && \
 git ci -am "Setting build version to ${nextVersion}-SNAPSHOT" && \
 git push && \
 echo "Release of stub-http $releaseVersion completed successfully!"
