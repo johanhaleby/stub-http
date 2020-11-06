@@ -3,13 +3,14 @@
             [stub-http.internal.functions :refer [substring-before]])
   (:import (clojure.lang PersistentArrayMap IPersistentMap IFn Keyword)))
 
+; Make keyword out of string and never mind "case" of keyword (i.e. :GET and :get are treated the same)
+(def normalize (comp keyword lower-case name))
+
 (defn- request-spec-matches? [request-spec request]
   (letfn [(path-without-query-params [path]
             (substring-before path "?"))
           (method-matches? [expected-method actual-method]
-            (let [; Make keyword out of string and never mind "case" of keyword (i.e. :GET and :get are treated the same)
-                  normalize (comp keyword lower-case name)
-                  expected-normalized (normalize (or expected-method actual-method)) ; Assume same as actual if not present
+            (let [expected-normalized (normalize (or expected-method actual-method)) ; Assume same as actual if not present
                   actual-normalized (normalize actual-method)]
               (= expected-normalized actual-normalized)))
           (path-matches? [expected-path actual-path]
@@ -20,11 +21,18 @@
               (= expected-params query-params-to-match)))
           (body-matches? [expected-body actual-body]
             (let [expected-body (or expected-body actual-body)]   ; Assume match if empty
-              (= expected-body actual-body)))]
+              (= expected-body actual-body)))
+          (headers-match? [expected-headers actual-headers]
+            (reduce
+              (fn [result key] (and result (= (get expected-headers key) (get actual-headers (normalize key)))))
+              true
+              (keys expected-headers)))
+          ]
     (and (apply path-matches? (map (comp path-without-query-params :path) [request-spec request]))
          (query-param-matches? (:query-params request-spec) (:query-params request))
          (method-matches? (:method request-spec) (:method request))
-         (body-matches? (:body request-spec) (get-in request [:body "postData"])))))
+         (body-matches? (:body request-spec) (get-in request [:body "postData"]))
+         (headers-match? (:headers request-spec) (:headers request)))))
 
 (defn- throw-normalization-exception! [type ^Object val]
   (let [class-name (-> val .getClass .getName)
