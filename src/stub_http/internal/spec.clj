@@ -31,7 +31,7 @@
     (and (apply path-matches? (map (comp path-without-query-params :path) [request-spec request]))
          (query-param-matches? (:query-params request-spec) (:query-params request))
          (method-matches? (:method request-spec) (:method request))
-         (body-matches? (:body request-spec) (get-in request [:body "postData"]))
+         (body-matches? (:body request-spec) (get-in request [:body (if (= (:method request) "PUT") "content" "postData")]))
          (headers-match? (:headers request-spec) (:headers request)))))
 
 (defn- throw-normalization-exception! [type ^Object val]
