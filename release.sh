@@ -16,7 +16,7 @@ sed -i "" "s/se\.haleby\/stub-http \"${currentVersion}-SNAPSHOT\"/se\.haleby\/st
 echo "Pushing changes to git" && \
 git ci -am "Preparing for release ${releaseVersion}" && \
 git push && \
-echo "Deploying ${releaseVersion} to clojars,  enter sonatype password if prompted." && \
+echo "Deploying ${releaseVersion} to clojars, enter clojars username as Username, and the stub-http deploy token as Password. Use sonatype password if GPG key password is prompted." && \
 lein deploy clojars && \
 echo "Will create and push git tags.." && \
 git tag -a "${releaseVersion}" -m "Released ${releaseVersion}" && \
