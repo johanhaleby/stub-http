@@ -18,7 +18,7 @@
          o)))
 
 (defn- indices-of-routes-matching-request [stub-http-request routes]
-  (keep-indexed #(if (true? ((:request-spec-fn %2) stub-http-request)) %1 nil) routes))
+  (keep-indexed #(if ((:request-spec-fn %2) stub-http-request) %1) routes))
 
 (defn- create-response [{:keys [status headers body content-type delay counter]}]
   "Create a nano-httpd Response from the given map.
