@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [stub-http.core :refer :all]
             [cheshire.core :as json]
-            [clj-http.lite.client :as client]))
+            [clj-http.lite.client :as client])
+  (:import (java.io ByteArrayInputStream)))
 
 (deftest BodyMatching
   (testing "routes can match on body for post request"
@@ -27,6 +28,22 @@
                         (json/parse-string true))]
         (is (= "world1" (:hello response1)))
         (is (= "world2" (:hello response2))))))
+
+  (testing "routes can handle binary payloads"
+    (with-routes!
+      {{:path         "/something"
+        :content-type "application/x-binary"
+        :accept       "application/x-binary"
+        :body         "A binary request"}
+       {:status 201 :content-type "application/x-binary" :body (-> "A binary response" (String.) (.getBytes) (ByteArrayInputStream.))}}
+      (let [response (->
+                        (str uri "/something")
+                        (client/post {:body         (-> "A binary request" (String.) (.getBytes) (ByteArrayInputStream.))
+                                      :content-type :application/x-binary
+                                      :accept       :application/x-binary})
+                        :body
+                        (str))]
+        (is (= "A binary response" response)))))
 
   (testing "routes can match on body for put request"
     (with-routes!
