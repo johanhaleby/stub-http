@@ -1,4 +1,4 @@
-(defproject se.haleby/stub-http "0.2.12"
+(defproject se.haleby/stub-http "0.2.13-SNAPSHOT"
   :description "A client library agonistic way to stub HTTP responses"
   :url "https://github.com/johanhaleby/stub-http"
   :license {:name         "MIT License"
