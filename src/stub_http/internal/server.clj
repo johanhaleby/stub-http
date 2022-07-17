@@ -2,7 +2,8 @@
   (:require [clojure.string :refer [split blank? lower-case]]
             [stub-http.internal.functions :refer [map-kv not-nil?]])
   (:import (fi.iki.elonen NanoHTTPD NanoHTTPD$Response$IStatus NanoHTTPD$Response$Status NanoHTTPD$IHTTPSession)
-           (java.util HashMap)))
+           (java.util HashMap)
+           (java.io InputStream)))
 
 (defn- params->map [param-string]
   (when-not (blank? param-string)
@@ -18,9 +19,9 @@
          o)))
 
 (defn- indices-of-routes-matching-request [stub-http-request routes]
-  (keep-indexed #(if ((:request-spec-fn %2) stub-http-request) %1) routes))
+  (keep-indexed #(when ((:request-spec-fn %2) stub-http-request) %1) routes))
 
-(defn- create-response [{:keys [status headers body content-type delay counter]}]
+(defn- create-response
   "Create a nano-httpd Response from the given map.
 
    path - The request path to mock, for example /search
@@ -28,16 +29,19 @@
    headers - The response headers (list or vector of tuples specifying headers). For example ([\"Content-Type\" \"application/json\"], ...)
    body - The response body
    delay - Delay in ms added to the response"
+  [{:keys [status headers body content-type delay counter]}]
   (let [; We see if a predefined status exists for the supplied status code
         ; If no match then we create a custom implementation of IStatus with the supplied status
         status (or (NanoHTTPD$Response$Status/lookup status)
                    (reify NanoHTTPD$Response$IStatus
-                            (getDescription [_] "")
-                            (getRequestStatus [_]
-                              status)))
-        nano-response (NanoHTTPD/newFixedLengthResponse status content-type body)]
-    (if delay (Thread/sleep delay))
-    (if counter (swap! counter inc))
+                     (getDescription [_] "")
+                     (getRequestStatus [_]
+                       status)))
+        nano-response (if (string? body)
+                        (NanoHTTPD/newFixedLengthResponse status content-type body)
+                        (NanoHTTPD/newFixedLengthResponse status content-type body (.available ^InputStream body)))]
+    (when delay (Thread/sleep delay))
+    (when counter (swap! counter inc))
     (doseq [[name value] headers]
       (.addHeader nano-response (to-str name) (to-str value)))
     nano-response))
@@ -69,13 +73,14 @@
     req-no-nils))
 
 (defn- find-default-route [routes]
-  (some #(if (= (:request-spec %) :default) %) routes))
+  (some #(when (= (:request-spec %) :default) %) routes))
 
 (defn- contains-default-route? [routes]
   (not-nil? (find-default-route routes)))
 
-(defn new-server! [port routes]
+(defn new-server!
   "Create a nano server instance that will return the same response over and over on match"
+  [port routes]
   (proxy [NanoHTTPD] [port]
     (serve [^NanoHTTPD$IHTTPSession session]
       (let [current-routes @routes
