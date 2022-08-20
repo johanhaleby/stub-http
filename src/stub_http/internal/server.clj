@@ -37,7 +37,7 @@
                      (getDescription [_] "")
                      (getRequestStatus [_]
                        status)))
-        nano-response (if (string? body)
+        nano-response (if (or (nil? body) (string? body))
                         (NanoHTTPD/newFixedLengthResponse status content-type body)
                         (NanoHTTPD/newFixedLengthResponse status content-type body (.available ^InputStream body)))]
     (when delay (Thread/sleep delay))
