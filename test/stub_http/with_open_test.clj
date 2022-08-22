@@ -20,6 +20,11 @@
             json-response (json/parse-string (:body response) true)]
         (is (= "world" (:hello json-response))))))
 
+  (testing "specifying body is optional"
+    (with-open [server (start! {"/something" {:status 200}})]
+      (let [response (client/get (str (:uri server) "/something"))]
+        (is (= "" (:body response))))))
+
   (testing "matches path with specific single query param"
     (with-open [server (start! {{:path "/something" :query-params {:first "value1"}}
                                 {:status 200 :content-type "application/json" :body (json/generate-string {:hello "world2"})}})]
