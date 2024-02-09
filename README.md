@@ -1,4 +1,4 @@
-# ![Logo](https://raw.githubusercontent.com/johanhaleby/stub-http/master/logo.png "Stub HTTP") [![Build Status](https://img.shields.io/travis/johanhaleby/stub-http.svg?style=flat)](https://travis-ci.org/johanhaleby/stub-http) [![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit) 
+# ![Logo](https://raw.githubusercontent.com/johanhaleby/stub-http/master/logo.png "Stub HTTP") [![MIT License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://www.tldrlegal.com/l/mit) 
 
 A Clojure library designed to stub HTTP responses regardless of which client library that is used to make the actual HTTP requests.
   
